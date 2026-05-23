@@ -242,7 +242,7 @@ with col_right:
 
 st.markdown("---")
 
-# --- 升級版：疊加算分引擎與詳細計算過程 ---
+# --- 升級版：疊加算分引擎與詳細計算過程 (精準鎖定黃色流轉命宮) ---
 def calculate_single_board_score(html_content, mode):
     if not html_content:
         return 50, ["無資料，給予基準分: 50分"]
@@ -259,14 +259,28 @@ def calculate_single_board_score(html_content, mode):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
+    # ==========================================
+    # 🌟 核心修正：尋找黃色區塊作為「流轉命宮」
+    # ==========================================
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
-        if "【命宮】" in cell_texts[idx]:
+        # 將該格子的 HTML 轉大寫並去除空白，精準比對背景顏色
+        cell_html = str(cells[idx]).replace(" ", "").upper()
+        # Windada 標示流轉命宮的顏色是 #FFCC66 (黃色)
+        if "BACKGROUND-COLOR:#FFCC66" in cell_html or "BACKGROUND-COLOR:YELLOW" in cell_html:
             ming_pos = i
             break
             
+    # 防呆機制：如果網站改版導致抓不到黃色，才退回找字面上的【命宮】
+    if ming_pos == -1: 
+        for i, idx in enumerate(clockwise_indices):
+            if "【命宮】" in cell_texts[idx]:
+                ming_pos = i
+                break
+                
     if ming_pos == -1: return 50, ["找不到命宮，給予基準分: 50分"]
 
+    # 找到命宮後，依照你的邏輯順時針推算 2(福)、4(官)、6(遷)、8(財)
     ming = cell_texts[clockwise_indices[ming_pos]]
     fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
     guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  
@@ -274,11 +288,10 @@ def calculate_single_board_score(html_content, mode):
     cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  
     
     palaces_to_check = [
-        (ming, True, "命宮"), (qian, True, "遷移"), (fu, True, "福德"), 
-        (cai, False, "財帛"), (guan, False, "事業")
+        (ming, True, "流轉命宮"), (qian, True, "流轉遷移"), (fu, True, "流轉福德"), 
+        (cai, False, "流轉財帛"), (guan, False, "流轉事業")
     ]
 
-    # 嚴格版：基礎起算分降為 50
     score = 50
     process_log = ["**🔹 基礎起算分: 50 分 (嚴格風控模式)**"]
     
@@ -298,7 +311,7 @@ def calculate_single_board_score(html_content, mode):
             score += pts
             process_log.append(f"✅ `{p_name}` 見權/科 x{quan_count+ke_count} (+{pts}分)")
         
-        # 2. 財星群聚 (每顆財星 +5 分，更細緻)
+        # 2. 財星群聚
         wealth_stars = sum(1 for star in ["武曲", "太陰", "天府"] if star in p_text)
         if "貪狼" in p_text and any(s in p_text for s in ["紅鸞", "天喜", "咸池", "天姚", "沐浴"]):
             wealth_stars += 1
@@ -308,7 +321,7 @@ def calculate_single_board_score(html_content, mode):
             process_log.append(f"✅ `{p_name}` 陽梁蔭星財 (+加計1財星)")
             
         if wealth_stars > 0:
-            pts = wealth_stars * 5 # 每顆財星給 5 分
+            pts = wealth_stars * 5
             score += pts
             process_log.append(f"💰 `{p_name}` 財星數量 x{wealth_stars} (+{pts}分)")
         
@@ -320,18 +333,17 @@ def calculate_single_board_score(html_content, mode):
             process_log.append(f"🐎 `{p_name}` 見天馬 x{ma_count} (+{pts}分)")
             
             if lu_count > 0:
-                score += 15 # 祿馬交馳
+                score += 15
                 process_log.append(f"🔥 `{p_name}` 祿馬交馳爆發 (+15分)")
             if "陀" in p_text:
-                score -= 20 # 嚴格：陀羅遇天馬
+                score -= 20
                 process_log.append(f"⚠️ `{p_name}` 陀羅折足馬 (-20分)")
             
-        # 4. 嚴格扣分區 (命遷福專屬)
+        # 4. 嚴格扣分區 (針對流轉命遷福)
         if is_mqf:
             has_kong = "地空" in p_text or "天空" in p_text
             has_jie = "地劫" in p_text
             
-            # 嚴格：空劫同宮扣 50，單見扣 20
             if has_kong and has_jie:
                 score -= 50
                 process_log.append(f"❌ `{p_name}` 空劫同宮重傷 (-50分)")
@@ -342,7 +354,6 @@ def calculate_single_board_score(html_content, mode):
                 score -= 20
                 process_log.append(f"❌ `{p_name}` 逢劫星 (-20分)")
                 
-            # 嚴格：忌煞一顆扣 20
             ji_count = len(re.findall(r'忌', p_text))
             if ji_count > 0:
                 is_exempt = any(f"{star}廟" in p_text or f"{star}旺" in p_text for star in ["武曲", "太陰", "太陽", "天機", "天同"])
