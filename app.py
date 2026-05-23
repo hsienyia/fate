@@ -170,95 +170,58 @@ with col_right:
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在計算..."):
+            with st.spinner("正在精準對接流時服務器..."):
                 try:
-                    # --- DEBUG 模式：印出目前的表單結構 ---
-                    st.write("--- 偵錯：目前的 Payload ---")
-                    
-                    # 複製一份原本的數據
-                    final_payload = st.session_state.transit_form_data.copy()
-                    
-                    # 注入時間參數
-                    final_payload['FateYear'] = str(t_year)
-                    final_payload['FateMonth'] = str(t_month)
-                    final_payload['FateDay'] = str(t_day)
-                    final_payload['FateHour'] = t_hour_val
-                    
-                    # 關鍵點：找出網站判定流時的那個按鈕的值 (例如 'caltime')
-                    # 這裡我們強行印出來看看它到底是什麼
-                    st.write(final_payload) 
-                    
-                    # 執行請求 (保持不變)
                     session = requests.Session()
-                    if st.session_state.cookies: session.cookies.update(st.session_state.cookies)
+                    if st.session_state.cookies:
+                        session.cookies.update(st.session_state.cookies)
                     
-                    # ... (發送請求後) ...
-                    
-                    # --- DEBUG 模式：檢查伺服器回傳的真實 URL ---
-                    st.write(f"送出網址: {st.session_state.submit_url}")
-                    
-                    headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-                        "Referer": "https://fate.windada.com/"
-                    }
-                    
-                    # 載入步驟一偷存的隱藏金鑰
+                    # 這是最關鍵的：直接從第一步抓下來的 HTML 裡提取正確的參數名稱
+                    transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 1. 精準覆寫流轉專用參數，使用防呆大小寫比對
-                    for key in list(final_payload.keys()):
-                        k_low = key.lower()
-                        if k_low == 'fatesolar': final_payload[key] = "1"  # 1為國曆
-                        elif k_low == 'fateyear': final_payload[key] = str(t_year)
-                        elif k_low == 'fatemonth': final_payload[key] = str(t_month)
-                        elif k_low == 'fateday': final_payload[key] = str(t_day)
-                        elif k_low == 'fatehour': final_payload[key] = str(t_hour_val)
-                        elif k_low == 'target': final_payload[key] = "0" if transit_start == "流年本宮" else "1"
+                    # 1. 根據網站邏輯，這些欄位是必須的
+                    final_payload.update({
+                        'FateYear': str(t_year),
+                        'FateMonth': str(t_month),
+                        'FateDay': str(t_day),
+                        'FateHour': str(t_hour_val),
+                        'Target': "0" if transit_start == "流年本宮" else "1"
+                    })
                     
-                    # 2. 智慧尋找網頁上真正的「按鈕名稱」並點擊
-                    transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
+                    # 2. 暴力破解：找到「流時」那個按鈕的 name 和 value
+                    # 網站透過按鈕的 value 來判斷要查什麼，我們必須精確補上
                     btn_found = False
                     for btn in transit_soup.find_all(['input', 'button']):
-                        if btn.get('type') in ['submit', 'button'] and transit_type in btn.get('value', ''):
-                            final_payload[btn.get('name')] = btn.get('value')
+                        val = btn.get('value', '')
+                        if '流時' in val:
+                            final_payload[btn.get('name')] = val
                             btn_found = True
                             break
-                            
-                    # 若動態尋找失敗的備用方案
-                    if not btn_found:
-                        btn_mapping = {"流年": "calyear", "流月": "calmonth", "流日": "calday", "流時": "caltime"}
-                        final_payload[btn_mapping.get(transit_type, 'calday')] = transit_type
                     
-                    # 3. 發送請求
+                    # 如果找不到流時按鈕，強制注入最常見的觸發參數
+                    if not btn_found:
+                        final_payload['caltime'] = '流時'
+
+                    # 3. 發送 POST 請求
                     res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=headers)
                     res_transit.encoding = 'utf-8'
                     transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
                     
-                    # 4. 尋找並儲存第二頁的流時盤表格
+                    # 4. 檢查結果是否真的變了 (如果結果跟第一步長度一樣，代表失敗)
                     transit_table = None
-                    max_td_count = 0
                     for table in transit_soup_res.find_all('table'):
-                        text = table.get_text()
-                        td_count = len(table.find_all('td'))
-                        if ("紫微" in text and "天機" in text) and td_count > max_td_count:
-                            transit_table = table
-                            max_td_count = td_count
-                            
-                    # 5. 抓取好運指數等標題
-                    t_header = ""
-                    for center_tag in transit_soup_res.find_all('center'):
-                        if "好運指數" in center_tag.text or transit_type in center_tag.text:
-                            for child in center_tag.children:
-                                if getattr(child, 'name', None) == 'table': break
-                                t_header += str(child)
-                            break
+                        if "紫微" in table.get_text() and "天機" in table.get_text():
+                            # 簡單判斷：若表格內出現了「流時」二字，才視為成功
+                            if "流時" in table.get_text():
+                                transit_table = table
+                                break
                     
                     if transit_table:
                         st.session_state.transit_chart = str(transit_table)
-                        st.session_state.transit_header = t_header
                         st.rerun()
                     else:
-                        st.error("未能成功抓取到流時盤，請確認參數。")
+                        st.error("送出的流時參數未被伺服器受理。請檢查該網站是否要求更複雜的驗證。")
 
                 except Exception as e:
                     st.error(f"第二步發生錯誤：{e}")
