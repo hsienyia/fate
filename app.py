@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import datetime
 import streamlit.components.v1 as components
+import re
 
 # --- 全域設定：確保不會再出現 name 'HEADERS' is not defined ---
 HEADERS = {
@@ -235,6 +236,109 @@ with col_right:
 
 st.markdown("---")
 
+def calculate_single_board_score(html_content):
+    if not html_content:
+        return 60 # 防呆機制，無資料給及格分
+        
+    soup = BeautifulSoup(html_content, 'html.parser')
+    # 找出所有寬度為 25% 的 td，這正是 Windada 命盤的 12 個宮位
+    cells = soup.find_all('td', width="25%")
+    if len(cells) != 12:
+        return 60 
+
+    cell_texts = [cell.get_text() for cell in cells]
+
+    # 定義 HTML DOM 到順時針十二地支的映射 (寅卯辰巳午未申酉戌亥子丑)
+    # 這是破解網頁排版的關鍵
+    clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
+    
+    # 1. 尋找命宮位置
+    ming_pos = -1
+    for i, idx in enumerate(clockwise_indices):
+        if "【命宮】" in cell_texts[idx]:
+            ming_pos = i
+            break
+            
+    if ming_pos == -1: return 60 # 找不到命宮
+
+    # 2. 依照你的順時針邏輯，抓取關鍵宮位文字
+    ming = cell_texts[clockwise_indices[ming_pos]]
+    fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  # 順時針 2 格：福德
+    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  # 順時針 4 格：事業
+    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]  # 順時針 6 格：遷移
+    cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  # 順時針 8 格：財帛
+    
+    core_palaces = [ming, qian, cai, guan, fu]
+    mqf_palaces = [ming, qian, fu] # 命、遷、福 (對空劫最敏感)
+
+    # 3. 開始評分 (基準分 60)
+    score = 60
+    
+    # --- 加分區 ---
+    # 祿馬交馳 (+20)
+    for p in core_palaces:
+        if "祿" in p and "馬" in p:
+            score += 20
+            break
+            
+    # 財星群聚 (+15)
+    wealth_stars = 0
+    full_text = "".join(core_palaces)
+    for star in ["武曲", "太陰", "天府"]:
+        if star in full_text: wealth_stars += 1
+    # 貪狼配桃花
+    if "貪狼" in full_text and any(s in full_text for s in ["紅鸞", "天喜", "咸池", "天姚", "沐浴"]): wealth_stars += 1
+    # 天梁配太陽
+    if "天梁" in full_text and "太陽" in full_text: wealth_stars += 1
+    if wealth_stars >= 2: score += 15
+        
+    # 核心見祿 (+10) / 核心見權科 (+5)
+    mqcf_text = ming + qian + cai + fu
+    if "祿" in mqcf_text: score += 10
+    if "權" in mqcf_text or "科" in mqcf_text: score += 5
+    
+    # 單見天馬 (+5)
+    if "馬" in full_text: score += 5
+
+    # --- 扣分區 ---
+    for p in core_palaces:
+        # 陀羅遇天馬 (-15)
+        if "陀" in p and "馬" in p: score -= 15
+        
+    for p in mqf_palaces:
+        # 空劫同宮 (-30)
+        if "地空" in p and "地劫" in p:
+            score -= 30
+        else:
+            # 單見空劫 (-10)
+            if "地空" in p: score -= 10
+            if "地劫" in p: score -= 10
+            
+        # 化忌判定 (-10) 與 廟旺豁免
+        if "忌" in p:
+            is_exempt = False
+            for star in ["武曲", "太陰", "太陽", "天機", "天同"]:
+                if f"{star}廟" in p or f"{star}旺" in p:
+                    is_exempt = True
+                    break
+            if not is_exempt:
+                score -= 10
+
+    # 將分數限制在 0 ~ 100 之間
+    return max(0, min(100, score))
+
+def get_total_luck_index(charts_dict):
+    if not charts_dict or len(charts_dict) < 4:
+        return 0
+    # 加權：年 15%, 月 15%, 日 30%, 時 40%
+    y_score = calculate_single_board_score(charts_dict.get("流年盤", ""))
+    m_score = calculate_single_board_score(charts_dict.get("流月盤", ""))
+    d_score = calculate_single_board_score(charts_dict.get("流日盤", ""))
+    h_score = calculate_single_board_score(charts_dict.get("流時盤", ""))
+    
+    total = (y_score * 0.15) + (m_score * 0.15) + (d_score * 0.3) + (h_score * 0.4)
+    return round(total, 1)
+
 # --- 3. 畫面顯示區 (上方本命，下方四盤) ---
 st.markdown("<h3 style='text-align: center;'>🪐 核心：本命盤</h3>", unsafe_allow_html=True)
 if st.session_state.birth_chart:
@@ -244,6 +348,35 @@ else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
 st.markdown("---")
+
+# --- 插入好運指數儀表板 ---
+if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_charts) == 4:
+    total_luck = get_total_luck_index(st.session_state.transit_charts)
+    
+    st.markdown("---")
+    st.markdown("### 📊 快樂體操核心：當下好運指數 (滿分 100)")
+    
+    # 使用 Streamlit 的並排欄位呈現指標
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        # 動態顏色判斷
+        color = "green" if total_luck >= 70 else "orange" if total_luck >= 50 else "red"
+        st.markdown(
+            f"""
+            <div style="background-color:{color}; padding:20px; border-radius:10px; text-align:center;">
+                <h1 style="color:white; font-size:48px; margin:0;">{total_luck} 分</h1>
+                <h4 style="color:white; margin:0;">(年15% + 月15% + 日30% + 時40%)</h4>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        if total_luck >= 80:
+            st.success("🔥 盤勢極佳！祿馬交馳或財星雲集，空劫無擾，此時適合積極佈局！")
+        elif total_luck >= 60:
+            st.info("⚖️ 盤勢中性偏吉。有機會，但需留意短線震盪洗盤。")
+        else:
+            st.error("⚠️ 盤勢風險高！命遷福受空劫忌重擊，此時極易被雙巴停損，建議空手觀望。")
 st.markdown("<h3 style='text-align: center;'>⚡ 四重流轉對照分析</h3>", unsafe_allow_html=True)
 
 # 顯示四個流轉盤
