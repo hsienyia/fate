@@ -166,51 +166,57 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：精準發送流轉設定，且不覆蓋本命資料
-        # 第二步按鈕：精準發送流轉設定 (修正版)
+        # 第二步按鈕：精準匹配按鈕名稱版
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在進行深度除錯..."):
+            with st.spinner("正在精準對接流時服務器..."):
                 try:
+                    # 1. 取得第一步殘留的 Session 與表單
                     session = requests.Session()
                     if st.session_state.cookies:
                         session.cookies.update(st.session_state.cookies)
                     
+                    transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 1. 強制設定流時參數
+                    # 2. 設定日期參數
                     final_payload.update({
                         'FateYear': str(t_year),
                         'FateMonth': str(t_month),
                         'FateDay': str(t_day),
                         'FateHour': str(t_hour_val),
-                        'calday': '流時' # 這是最重要的觸發鍵
+                        'calday': '流時'
                     })
                     
-                    # 2. 這是最關鍵的一步：找出真正的送出按鈕名稱
-                    # 我們將所有的參數印出來給你檢查
-                    st.write("--- 檢查送出的參數 ---")
-                    st.json(final_payload)
+                    # 3. 關鍵修正：找出表單中名為 "流時" 的按鈕，將其 name 和 value 加入 POST 資料
+                    # 這會欺騙伺服器，讓它以為你真的按了那個按鈕
+                    for btn in transit_soup.find_all(['input', 'button']):
+                        if btn.get('value') == '流時':
+                            final_payload[btn.get('name')] = '流時'
+                            break
                     
+                    # 4. 發送請求
                     res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
                     res_transit.encoding = 'utf-8'
                     
-                    # 3. 徹底揭露回傳結果
-                    st.write("--- 伺服器回傳內容 (前 1000 字) ---")
-                    st.text(res_transit.text[:1000])
-                    
+                    # 5. 驗證結果
                     transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
+                    transit_table = None
+                    for table in transit_soup_res.find_all('table'):
+                        if "紫微" in table.get_text() and "流時" in table.get_text():
+                            transit_table = table
+                            break
                     
-                    # 4. 檢查回傳網頁中是否真的有「流時」的表單
-                    if "流時" in res_transit.text:
-                        st.success("成功偵測到流時內容！")
+                    if transit_table:
+                        st.session_state.transit_chart = str(transit_table)
+                        st.rerun()
                     else:
-                        st.warning("回傳的網頁中找不到「流時」關鍵字，可能參數送錯了。")
+                        st.error("伺服器已接收請求，但未返回正確的流時盤。請檢查「流月起始宮位」。")
 
                 except Exception as e:
-                    st.error(f"發生錯誤：{e}")
-
+                    st.error(f"第二步發生錯誤：{e}")
+                    
 st.markdown("---")
 
 # --- 3. 畫面顯示區 (原汁原色雙盤並列) ---
