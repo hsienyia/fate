@@ -101,34 +101,32 @@ with col_right:
         else:
             st.error("請先取得本命盤！")
 
-# --- 3. 畫面顯示區 ---
+# --- 3. 畫面顯示區 (修正重複渲染問題) ---
 if st.session_state.birth_chart:
     st.markdown("---")
     st.markdown("### ⚡ 本地端自動生成四盤")
     
-    # 直接輸出原始 HTML 給瀏覽器
-    for mode in ["流年", "流月", "流日", "流時"]:
-        st.markdown(f"#### {mode}盤")
-        try:
-            # 確保內容轉為字串
-            html_content = inject_transit_info(st.session_state.birth_chart, mode)
-            # 使用 components 渲染 HTML
-            components.html(html_content, height=400, scrolling=True)
-        except Exception as e:
-            st.error(f"渲染錯誤: {e}")
-    
-    # 2. 顯示四個流轉盤
+    # 建立 2x2 佈局
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
-    modes = [("流年盤", col1, "流年"), ("流月盤", col2, "流月"), 
-             ("流日盤", col3, "流日"), ("流時盤", col4, "流時")]
+    # 模式與欄位對應
+    mode_configs = [
+        ("流年盤", col1, "流年"), 
+        ("流月盤", col2, "流月"), 
+        ("流日盤", col3, "流日"), 
+        ("流時盤", col4, "流時")
+    ]
     
-    for title, col, mode in modes:
+    for title, col, mode_name in mode_configs:
         with col:
-            st.markdown(f"**{title}**")
-            # 這裡呼叫你的注入函式，將模式名稱標記在盤面上
-            transit_html = inject_transit_info(st.session_state.birth_chart, mode, 0)
-            components.html(transit_html, height=500, scrolling=True)
+            st.markdown(f"#### {title}")
+            try:
+                # 呼叫 inject_transit_info
+                # 注意：你定義的 inject_transit_info 參數是 (html, mode, offset)，請補上第三個參數 0
+                transit_html = inject_transit_info(st.session_state.birth_chart, mode_name, 0)
+                components.html(transit_html, height=450, scrolling=True)
+            except Exception as e:
+                st.error(f"渲染錯誤: {e}")
 else:
-    st.info("請先匯入本命盤 HTML 以開始排盤。")
+    st.info("請先輸入資料並點擊「1️⃣ 取得本命盤」。")
