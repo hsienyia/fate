@@ -172,43 +172,31 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 修正後的第二步按鈕邏輯
-        if st.button("取得流時命盤"):
-        soup = BeautifulSoup(st.session_state.res1, 'html.parser')
-        form = soup.find('form')
-        
-        # --- 偵錯區：把所有 submit 按鈕的名字印出來 ---
-        buttons = form.find_all('input', {'type': 'submit'})
-        st.write("找到的按鈕名稱有：")
-        for btn in buttons:
-            st.write(f"Name: {btn.get('name')}, Value: {btn.get('value')}")
-        
-        # 準備 payload
-        payload = {inp.get('name'): inp.get('value', '') for inp in form.find_all('input') if inp.get('name')}
-        
-        # 注入日期
-        payload.update({
-            "FateYear": str(ty), "FateMonth": str(tm), "FateDay": str(td), 
-            "FateHour": "16"
-        })
-        
-        # 核心修改：不猜測名稱，從網頁抓到的按鈕中，直接尋找值為「流時」的那個
-        found_btn = False
-        for btn in buttons:
-            if btn.get('value') == '流時':
-                payload[btn.get('name')] = '流時'
-                found_btn = True
-                break
-        
-        if not found_btn:
-            st.warning("沒找到名為「流時」的按鈕，請看上面的偵錯清單確認正確名稱！")
-            
-        action_url = urljoin("https://fate.windada.com/cgi-bin/fate", form.get('action'))
-        res2 = st.session_state.session.post(action_url, data=payload, headers=HEADERS)
-        st.session_state.res2 = res2.text
-        st.session_state.step = 3
-        st.rerun()
+        # 第二步按鈕：改用 URL 參數強制導向 (最直接的觸發方式)
+        if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
+            with st.spinner("正在強制觸發流時計算..."):
+                try:
+                    # 這是該網站流時查詢的真實 URL 參數組合
+                    # 我們不再 POST 表單，而是直接組合出該功能的目標參數
+                    params = {
+                        "FateYear": str(t_year),
+                        "FateMonth": str(t_month),
+                        "FateDay": str(t_day),
+                        "FateHour": str(hours_map[t_hour_label]),
+                        "calday": "流時",
+                        "Target": "0" if transit_start == "流年本宮" else "1"
+                    }
                     
+                    # 嘗試以 GET 方式帶參數直接存取
+                    res_transit = session.get("https://fate.windada.com/cgi-bin/fate", params=params, headers=HEADERS)
+                    
+                    # 顯示結果
+                    st.session_state.transit_chart = res_transit.text
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"錯誤：{e}")
+
+
 st.markdown("---")
 
 # --- 3. 畫面顯示區 (原汁原色雙盤並列) ---
