@@ -32,6 +32,8 @@ if "transit_chart" not in st.session_state:
     st.session_state.transit_chart = None
 if "transit_header" not in st.session_state:
     st.session_state.transit_header = ""
+if "transit_charts" not in st.session_state:
+    st.session_state.transit_charts = {}
 
 now = datetime.datetime.now()
 
@@ -172,93 +174,97 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：使用精準的 HTML 表單對應 Payload
-        if st.button("🚀 一次執行排盤與流時", use_container_width=True):
-            with st.spinner("正在向伺服器請求流轉盤..."):
+        # 第二步按鈕：連續請求四個盤
+        if st.button("🚀 一鍵取得四重流轉盤", use_container_width=True):
+            with st.spinner("正在向伺服器請求年、月、日、時四個盤 (請稍候幾秒)..."):
                 try:
-                    # 1. 重新建立 Session 並載入步驟一取得的 Cookie
+                    # 1. 重新建立 Session 並載入 Cookie
                     session = requests.Session()
                     if st.session_state.cookies:
                         requests.utils.add_dict_to_cookiejar(session.cookies, st.session_state.cookies)
                     
-                    # 2. 根據查詢模式對應 HTML 中的 Target 參數
-                    # 3=流年, 4=流月, 5=流日, 6=流時
-                    target_map = {"流年": "3", "流月": "4", "流日": "5", "流時": "6"}
-                    target_val = target_map[transit_type]
+                    # 2. 定義四個盤的 Target 代碼
+                    targets = {"流年盤": "3", "流月盤": "4", "流日盤": "5", "流時盤": "6"}
+                    st.session_state.transit_charts = {} # 清空舊資料
                     
-                    # 3. 建立完全符合網站原始碼的 Payload
-                    payload = {
-                        "FUNC": "Basic",
-                        "Name": "",
-                        "Solar": "1", # 本命國曆
-                        "Year": str(year),
-                        "Month": str(month),
-                        "Day": str(day),
-                        "Hour": hours_map[hour_label],
-                        "Sex": "1" if gender_label == "男" else "0",
-                        "Target": target_val, # 動態對應流年/月/日/時
-                        "SubTarget": "0",
-                        "Old": "0",
-                        "FateYearType": "0" if transit_start == "流年本宮" else "1",
-                        "FateSolar": "0", # 流轉日期 (預設為農曆，對應 HTML 的 option 0)
-                        "FateYear": str(t_year),
-                        "FateMonth": str(t_month),
-                        "FateDay": str(t_day),
-                        "FateHour": hours_map[t_hour_label]
-                    }
-                    
-                    # 4. 發送請求
-                    response = session.post("https://fate.windada.com/cgi-bin/fate", data=payload, headers=HEADERS)
-                    response.encoding = 'utf-8'
-                    
-                    # 5. 解析回傳的流轉盤
-                    transit_soup = BeautifulSoup(response.text, 'html.parser')
-                    transit_table = None
-                    max_td_count = 0
-                    
-                    for table in transit_soup.find_all('table'):
-                        text = table.get_text()
-                        td_count = len(table.find_all('td'))
-                        # 尋找真正的命盤表格 (包含 12 宮位)
-                        if ("紫微" in text and "天機" in text) and td_count > max_td_count:
-                            transit_table = table
-                            max_td_count = td_count
-                            
-                    if transit_table:
-                        st.session_state.transit_chart = str(transit_table)
+                    # 3. 迴圈連續發送四次請求
+                    for title, target_val in targets.items():
+                        payload = {
+                            "FUNC": "Basic",
+                            "Name": "",
+                            "Solar": "1",
+                            "Year": str(year),
+                            "Month": str(month),
+                            "Day": str(day),
+                            "Hour": hours_map[hour_label],
+                            "Sex": "1" if gender_label == "男" else "0",
+                            "Target": target_val, # 動態替換 3, 4, 5, 6
+                            "SubTarget": "0",
+                            "Old": "0",
+                            "FateYearType": "0" if transit_start == "流年本宮" else "1",
+                            "FateSolar": "0",
+                            "FateYear": str(t_year),
+                            "FateMonth": str(t_month),
+                            "FateDay": str(t_day),
+                            "FateHour": hours_map[t_hour_label]
+                        }
                         
-                        # 順便抓取網站上方的藍色標題 (例如: 流時：農曆2026年5月...)
-                        header_tag = transit_soup.find('font', color='blue')
-                        if header_tag:
-                            st.session_state.transit_header = f"<h3>{header_tag.get_text()}</h3>"
-                        else:
-                            st.session_state.transit_header = f"<h3>{transit_type}運勢盤</h3>"
-                            
-                        st.rerun()
-                    else:
-                        st.error("請求失敗，可能網站已鎖死 Session 或參數有誤。")
+                        response = session.post("https://fate.windada.com/cgi-bin/fate", data=payload, headers=HEADERS)
+                        response.encoding = 'utf-8'
                         
+                        # 解析並存入字典
+                        transit_soup = BeautifulSoup(response.text, 'html.parser')
+                        transit_table = None
+                        max_td_count = 0
+                        
+                        for table in transit_soup.find_all('table'):
+                            text = table.get_text()
+                            td_count = len(table.find_all('td'))
+                            if ("紫微" in text and "天機" in text) and td_count > max_td_count:
+                                transit_table = table
+                                max_td_count = td_count
+                                
+                        if transit_table:
+                            st.session_state.transit_charts[title] = str(transit_table)
+                            
+                    st.rerun() # 四個盤都抓完後重整畫面
+                    
                 except Exception as e:
                     st.error(f"錯誤：{e}")
 
 st.markdown("---")
 
-# --- 3. 畫面顯示區 (原汁原色雙盤並列) ---
-out_left, out_right = st.columns(2)
+# --- 3. 畫面顯示區 (上方本命，下方四盤) ---
+st.markdown("<h3 style='text-align: center;'>🪐 核心：本命盤</h3>", unsafe_allow_html=True)
+if st.session_state.birth_chart:
+    # 置中顯示本命盤
+    components.html(st.session_state.birth_chart, height=550, scrolling=True)
+else:
+    st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
-with out_left:
-    st.markdown("<h3 style='text-align: center;'>🪐 本命盤</h3>", unsafe_allow_html=True)
-    if st.session_state.birth_chart:
-        st.markdown(st.session_state.birth_chart, unsafe_allow_html=True)
-    else:
-        st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
+st.markdown("---")
+st.markdown("<h3 style='text-align: center;'>⚡ 四重流轉對照分析</h3>", unsafe_allow_html=True)
 
-with out_right:
-    st.markdown("<h3 style='text-align: center;'>⚡ 流轉運勢盤</h3>", unsafe_allow_html=True)
-    if st.session_state.transit_chart:
-        st.markdown(f"<div style='text-align: center;'>{st.session_state.transit_header}</div>", unsafe_allow_html=True)
-        st.markdown(st.session_state.transit_chart, unsafe_allow_html=True)
-    elif st.session_state.step1_done:
-        st.info("本命盤已就緒！請設定上方流轉日期後，點擊「2️⃣ 疊加流轉盤」。")
-    else:
-        st.info("等待步驟一完成。")
+# 顯示四個流轉盤
+if hasattr(st.session_state, 'transit_charts') and st.session_state.transit_charts:
+    # 建立 2x2 網格
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
+    
+    grid_mapping = [
+        ("流年盤", col1),
+        ("流月盤", col2),
+        ("流日盤", col3),
+        ("流時盤", col4)
+    ]
+    
+    for title, col in grid_mapping:
+        with col:
+            st.markdown(f"<h4 style='text-align: center;'>{title}</h4>", unsafe_allow_html=True)
+            if title in st.session_state.transit_charts:
+                # 渲染網站算好的真實盤面
+                components.html(st.session_state.transit_charts[title], height=500, scrolling=True)
+            else:
+                st.warning(f"無法取得{title}資料")
+elif st.session_state.step1_done:
+    st.info("本命盤已就緒！請設定上方流轉日期後，點擊「🚀 一鍵取得四重流轉盤」。")
