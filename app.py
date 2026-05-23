@@ -41,12 +41,12 @@ with col_left:
     sex = st.radio("性別", ["男", "女"], horizontal=True)
 
     if st.button("🚀 生成全部流轉盤"):
-    if st.session_state.birth_chart:
-        # 我們直接在本地處理，不再進行網路請求，徹底避開網站限制
-        st.session_state.do_render = True 
-        st.rerun()
-    else:
-        st.error("請先取得本命盤！")
+        if st.session_state.birth_chart:
+            # 我們直接在本地處理，不再進行網路請求，徹底避開網站限制
+            st.session_state.do_render = True 
+            st.rerun()
+        else:
+            st.error("請先取得本命盤！")
                 
 
 with col_right:
