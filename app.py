@@ -173,48 +173,38 @@ with col_right:
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
         # 第二步按鈕：改用 URL 參數強制導向 (最直接的觸發方式)
-        if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
-            with st.spinner("正在進行最後底層匹配..."):
+        # 將「取得本命」與「流時疊加」合併為一次請求
+        if st.button("🚀 一次執行排盤與流時", use_container_width=True):
+            with st.spinner("正在執行完整排盤請求..."):
                 try:
-                    # 1. 強制設定更完整的瀏覽器特徵 (偽裝成完全合法的瀏覽器)
-                    custom_headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                        "Referer": "https://fate.windada.com/cgi-bin/fate",
-                        "Origin": "https://fate.windada.com",
-                        "Content-Type": "application/x-www-form-urlencoded"
+                    # 1. 直接建立完整的 Payload
+                    # 這是最底層的參數集，Windada 這類網站通常接收這組組合拳
+                    payload = {
+                        "year": str(year),
+                        "month": str(month),
+                        "day": str(day),
+                        "hour": hours_map[hour_label],
+                        "sex": "1" if gender_label == "男" else "0",
+                        "type": "find", # 必須包含查詢動作
+                        "place": "1",
+                        # 加入流時參數
+                        "FateYear": str(t_year),
+                        "FateMonth": str(t_month),
+                        "FateDay": str(t_day),
+                        "FateHour": hours_map[t_hour_label],
+                        "calday": "流時"
                     }
                     
-                    # 2. 準備 payload，這次我們保留網站 Form 的原始鍵值
-                    payload = st.session_state.transit_form_data.copy()
+                    # 2. 直接 POST 到查詢 URL
+                    response = session.post("https://fate.windada.com/cgi-bin/fate", data=payload, headers=HEADERS)
                     
-                    # 3. 注入時間參數
-                    payload.update({
-                        'FateYear': str(t_year),
-                        'FateMonth': str(t_month),
-                        'FateDay': str(t_day),
-                        'FateHour': str(hours_map[t_hour_label]),
-                        'calday': '流時' # 關鍵觸發器
-                    })
-                    
-                    # 4. 關鍵差異：有些網站會檢查是否送出了特定的隱藏輸入框，我們把所有原始 form 欄位都補上
-                    # 如果該網站的流時盤有特定的 hidden 欄位，這步能補齊
-                    
-                    # 5. 發送 POST 請求
-                    response = st.session_state.session.post(
-                        st.session_state.submit_url, 
-                        data=payload, 
-                        headers=custom_headers
-                    )
-                    
-                    # 6. 分析回傳內容
-                    if "紫微" in response.text and "流時" in response.text:
+                    # 3. 檢查結果
+                    if "紫微" in response.text:
                         st.session_state.transit_chart = response.text
                         st.rerun()
                     else:
-                        st.error("伺服器回應了，但內容依然未包含流時盤資訊。")
-                        st.text("回傳內容前 500 字:")
-                        st.text(response.text[:500])
-
+                        st.error("請求失敗，可能網站已鎖死 Session。")
+                        
                 except Exception as e:
                     st.error(f"錯誤：{e}")
 
