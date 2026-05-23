@@ -341,18 +341,23 @@ def calculate_single_board_score(html_content, mode):
             
         # 4. 嚴格扣分區 (針對流轉命遷福)
         if is_mqf:
-            has_kong = "地空" in p_text or "天空" in p_text
-            has_jie = "地劫" in p_text
+            # 定義不同等級的空亡星
+            has_kong_soft = "旬空" in p_text or "天空" in p_text
+            has_kong_hard = "地空" in p_text
+            has_jie_hard = "地劫" in p_text
             
-            if has_kong and has_jie:
+            if has_kong_hard and has_jie_hard:
                 score -= 100
-                process_log.append(f"❌ `{p_name}` 空劫同宮重傷 (-50分)")
-            elif has_kong:
+                process_log.append(f"❌ `{p_name}` 地空地劫同宮重傷 (-100分)")
+            elif has_kong_hard:
                 score -= 40
-                process_log.append(f"❌ `{p_name}` 逢空星 (-20分)")
-            elif has_jie:
+                process_log.append(f"❌ `{p_name}` 逢地空星 (-40分)")
+            elif has_jie_hard:
                 score -= 40
-                process_log.append(f"❌ `{p_name}` 逢劫星 (-20分)")
+                process_log.append(f"❌ `{p_name}` 逢地劫星 (-40分)")
+            elif has_kong_soft:
+                score -= 20
+                process_log.append(f"❌ `{p_name}` 逢旬空/天空星 (-20分)")
                 
             ji_count = len(re.findall(r'忌', p_text))
             if ji_count > 0:
