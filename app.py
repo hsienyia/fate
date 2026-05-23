@@ -212,6 +212,22 @@ with col_right:
                     # 發送請求
                     res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
                     res_transit.encoding = 'utf-8'
+
+                    # 1. 直接顯示網頁標題或部分內容，看看是不是真的切換到流時頁面了
+                    st.write("--- 偵錯資訊 ---")
+                    if "流時" in res_transit.text:
+                        st.success("網頁原始碼中確實包含「流時」關鍵字！")
+                    else:
+                        st.warning("網頁原始碼中沒有「流時」關鍵字，代表參數還是沒生效。")
+                    
+                    # 2. 把網頁上所有的 Table 表格都印出來，不篩選！
+                    soup_res = BeautifulSoup(res_transit.text, 'html.parser')
+                    tables = soup_res.find_all('table')
+                    st.write(f"共找到 {len(tables)} 個表格")
+                    
+                    for i, table in enumerate(tables):
+                        st.write(f"表格 {i}:")
+                        st.markdown(str(table), unsafe_allow_html=True)
                     
                     # 驗證內容
                     if "紫微" in res_transit.text and "流時" in res_transit.text:
