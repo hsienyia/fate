@@ -4,6 +4,12 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import datetime
 
+# --- 全域設定：確保不會再出現 name 'HEADERS' is not defined ---
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+    "Referer": "https://fate.windada.com/"
+}
+
 # --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
 st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
