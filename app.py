@@ -173,42 +173,41 @@ with col_right:
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
         # 修正後的第二步按鈕邏輯
-        if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
-            t_hour_val = hours_map[t_hour_label]
+        if st.button("取得流時命盤"):
+        soup = BeautifulSoup(st.session_state.res1, 'html.parser')
+        form = soup.find('form')
+        
+        # --- 偵錯區：把所有 submit 按鈕的名字印出來 ---
+        buttons = form.find_all('input', {'type': 'submit'})
+        st.write("找到的按鈕名稱有：")
+        for btn in buttons:
+            st.write(f"Name: {btn.get('name')}, Value: {btn.get('value')}")
+        
+        # 準備 payload
+        payload = {inp.get('name'): inp.get('value', '') for inp in form.find_all('input') if inp.get('name')}
+        
+        # 注入日期
+        payload.update({
+            "FateYear": str(ty), "FateMonth": str(tm), "FateDay": str(td), 
+            "FateHour": "16"
+        })
+        
+        # 核心修改：不猜測名稱，從網頁抓到的按鈕中，直接尋找值為「流時」的那個
+        found_btn = False
+        for btn in buttons:
+            if btn.get('value') == '流時':
+                payload[btn.get('name')] = '流時'
+                found_btn = True
+                break
+        
+        if not found_btn:
+            st.warning("沒找到名為「流時」的按鈕，請看上面的偵錯清單確認正確名稱！")
             
-            with st.spinner("正在模擬按下「流時」按鈕..."):
-                try:
-                    session = requests.Session()
-                    if st.session_state.cookies:
-                        session.cookies.update(st.session_state.cookies)
-                    
-                    # 1. 複製所有表單資料
-                    final_payload = st.session_state.transit_form_data.copy()
-                    
-                    # 2. 填入你的目標日期
-                    final_payload.update({
-                        'FateYear': str(t_year),
-                        'FateMonth': str(t_month),
-                        'FateDay': str(t_day),
-                        'FateHour': str(t_hour_val)
-                    })
-                    
-                    # 3. 【核心修正】強制補上網站判定「點擊流時」的參數
-                    # 觀察你的截圖，網頁上有一個 <input type="submit" name="caltime" value="流時">
-                    # 我們必須確保這個 name="caltime" value="流時" 被送出
-                    final_payload['caltime'] = '流時'
-                    
-                    # 4. 發送請求
-                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
-                    res_transit.encoding = 'utf-8'
-                    
-                    # 5. 驗證並顯示 (跳過不需要的表格，直接抓流時盤)
-                    st.success("請求已送出！正在解析結果...")
-                    st.session_state.transit_chart = res_transit.text
-                    st.rerun()
-
-                except Exception as e:
-                    st.error(f"錯誤：{e}")
+        action_url = urljoin("https://fate.windada.com/cgi-bin/fate", form.get('action'))
+        res2 = st.session_state.session.post(action_url, data=payload, headers=HEADERS)
+        st.session_state.res2 = res2.text
+        st.session_state.step = 3
+        st.rerun()
                     
 st.markdown("---")
 
