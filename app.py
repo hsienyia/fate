@@ -364,9 +364,7 @@ def calculate_single_board_score(html_content, mode):
                     score -= pts
                     process_log.append(f"❌ `{p_name}` 逢忌煞 x{ji_count} (-{pts}分)")
 
-    final_score = max(0, min(100, score))
-    if score != final_score:
-        process_log.append(f"📊 結算溢出調整: 原始 {score} 分 ➔ 最終限制在 {final_score} 分")
+    
     return final_score, process_log
     
 
