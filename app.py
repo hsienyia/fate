@@ -236,105 +236,104 @@ with col_right:
 
 st.markdown("---")
 
-def calculate_single_board_score(html_content):
+# --- 升級版：疊加算分引擎與時間濾鏡 ---
+def calculate_single_board_score(html_content, mode):
     if not html_content:
-        return 60 # 防呆機制，無資料給及格分
+        return 60 # 防呆機制
         
+    # 1. 啟動時間濾鏡：剔除未來維度的星曜干擾
+    # 這樣流年盤就不會被流時星曜影響
+    if mode == "流年盤":
+        html_content = re.sub(r'流[月日時][祿權科忌]', '', html_content)
+    elif mode == "流月盤":
+        html_content = re.sub(r'流[日時][祿權科忌]', '', html_content)
+    elif mode == "流日盤":
+        html_content = re.sub(r'流時[祿權科忌]', '', html_content)
+
     soup = BeautifulSoup(html_content, 'html.parser')
-    # 找出所有寬度為 25% 的 td，這正是 Windada 命盤的 12 個宮位
     cells = soup.find_all('td', width="25%")
-    if len(cells) != 12:
-        return 60 
+    if len(cells) != 12: return 60 
 
     cell_texts = [cell.get_text() for cell in cells]
-
-    # 定義 HTML DOM 到順時針十二地支的映射 (寅卯辰巳午未申酉戌亥子丑)
-    # 這是破解網頁排版的關鍵
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
-    # 1. 尋找命宮位置
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
         if "【命宮】" in cell_texts[idx]:
             ming_pos = i
             break
             
-    if ming_pos == -1: return 60 # 找不到命宮
+    if ming_pos == -1: return 60
 
-    # 2. 依照你的順時針邏輯，抓取關鍵宮位文字
     ming = cell_texts[clockwise_indices[ming_pos]]
-    fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  # 順時針 2 格：福德
-    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  # 順時針 4 格：事業
-    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]  # 順時針 6 格：遷移
-    cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  # 順時針 8 格：財帛
+    fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
+    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  
+    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]  
+    cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  
     
-    core_palaces = [ming, qian, cai, guan, fu]
-    mqf_palaces = [ming, qian, fu] # 命、遷、福 (對空劫最敏感)
+    # 綁定宮位與「是否為命遷福」的屬性
+    palaces_to_check = [
+        (ming, True), (qian, True), (fu, True),  # 命、遷、福 (對空劫忌最敏感)
+        (cai, False), (guan, False)              # 財、官
+    ]
 
-    # 3. 開始評分 (基準分 60)
     score = 60
     
-    # --- 加分區 ---
-    # 祿馬交馳 (+20)
-    for p in core_palaces:
-        if "祿" in p and "馬" in p:
-            score += 20
-            break
-            
-    # 財星群聚 (+15)
-    wealth_stars = 0
-    full_text = "".join(core_palaces)
-    for star in ["武曲", "太陰", "天府"]:
-        if star in full_text: wealth_stars += 1
-    # 貪狼配桃花
-    if "貪狼" in full_text and any(s in full_text for s in ["紅鸞", "天喜", "咸池", "天姚", "沐浴"]): wealth_stars += 1
-    # 天梁配太陽
-    if "天梁" in full_text and "太陽" in full_text: wealth_stars += 1
-    if wealth_stars >= 2: score += 15
+    for p_text, is_mqf in palaces_to_check:
+        # 1. 祿、權、科 (完美疊加計分！)
+        lu_count = len(re.findall(r'祿', p_text))
+        quan_count = len(re.findall(r'權', p_text))
+        ke_count = len(re.findall(r'科', p_text))
         
-    # 核心見祿 (+10) / 核心見權科 (+5)
-    mqcf_text = ming + qian + cai + fu
-    if "祿" in mqcf_text: score += 10
-    if "權" in mqcf_text or "科" in mqcf_text: score += 5
-    
-    # 單見天馬 (+5)
-    if "馬" in full_text: score += 5
-
-    # --- 扣分區 ---
-    for p in core_palaces:
-        # 陀羅遇天馬 (-15)
-        if "陀" in p and "馬" in p: score -= 15
+        score += (lu_count * 10)
+        score += (quan_count + ke_count) * 5
         
-    for p in mqf_palaces:
-        # 空劫同宮 (-30)
-        if "地空" in p and "地劫" in p:
-            score -= 30
-        else:
-            # 單見空劫 (-10)
-            if "地空" in p: score -= 10
-            if "地劫" in p: score -= 10
+        # 2. 財星群聚
+        wealth_stars = sum(1 for star in ["武曲", "太陰", "天府"] if star in p_text)
+        if "貪狼" in p_text and any(s in p_text for s in ["紅鸞", "天喜", "咸池", "天姚", "沐浴"]):
+            wealth_stars += 1
+        if "天梁" in p_text and "太陽" in p_text:
+            wealth_stars += 1
             
-        # 化忌判定 (-10) 與 廟旺豁免
-        if "忌" in p:
-            is_exempt = False
-            for star in ["武曲", "太陰", "太陽", "天機", "天同"]:
-                if f"{star}廟" in p or f"{star}旺" in p:
-                    is_exempt = True
-                    break
-            if not is_exempt:
+        score += (wealth_stars * 10)
+        
+        # 3. 動能：天馬與祿馬交馳
+        ma_count = len(re.findall(r'馬', p_text))
+        score += (ma_count * 5)
+        
+        if lu_count > 0 and ma_count > 0:
+            score += 20 # 爆發力加成
+            
+        if "陀" in p_text and ma_count > 0:
+            score -= 15 # 折足馬
+            
+        # 4. 嚴格扣分區：命遷福專屬的空劫忌防護網
+        if is_mqf:
+            has_kong = "地空" in p_text or "天空" in p_text
+            has_jie = "地劫" in p_text
+            
+            if has_kong and has_jie:
+                score -= 30 # 空劫同宮重傷
+            elif has_kong or has_jie:
                 score -= 10
+                
+            # 化忌疊加扣分與廟旺豁免
+            ji_count = len(re.findall(r'忌', p_text))
+            if ji_count > 0:
+                is_exempt = any(f"{star}廟" in p_text or f"{star}旺" in p_text for star in ["武曲", "太陰", "太陽", "天機", "天同"])
+                if not is_exempt:
+                    score -= (ji_count * 10) # 幾個忌就扣幾次
 
-    # 將分數限制在 0 ~ 100 之間
     return max(0, min(100, score))
 
 def get_total_luck_index(charts_dict):
     if not charts_dict or len(charts_dict) < 4:
         return 0
-    # 加權：年 15%, 月 15%, 日 30%, 時 40%
-    y_score = calculate_single_board_score(charts_dict.get("流年盤", ""))
-    m_score = calculate_single_board_score(charts_dict.get("流月盤", ""))
-    d_score = calculate_single_board_score(charts_dict.get("流日盤", ""))
-    h_score = calculate_single_board_score(charts_dict.get("流時盤", ""))
+    # 注意這裡：我們把 mode 傳進去了！
+    y_score = calculate_single_board_score(charts_dict.get("流年盤", ""), "流年盤")
+    m_score = calculate_single_board_score(charts_dict.get("流月盤", ""), "流月盤")
+    d_score = calculate_single_board_score(charts_dict.get("流日盤", ""), "流日盤")
+    h_score = calculate_single_board_score(charts_dict.get("流時盤", ""), "流時盤")
     
     total = (y_score * 0.15) + (m_score * 0.15) + (d_score * 0.3) + (h_score * 0.4)
     return round(total, 1)
