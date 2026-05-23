@@ -56,15 +56,30 @@ with col_right:
         else:
             st.error("請先取得本命盤！")
 
-# --- 結果顯示區 ---
-if st.session_state.birth_chart:
-    st.markdown("---")
-    st.markdown("### 🪐 本地端生成四盤對照")
-    c1, c2 = st.columns(2)
-    c3, c4 = st.columns(2)
+# --- 3. 本地化四盤並列顯示區 ---
+st.markdown("---")
+st.markdown("### ⚡ 本地端自動生成四盤")
+
+# 檢查 st.session_state.birth_chart 是否真的有資料
+if st.session_state.birth_chart is not None:
+    # 建立 2x2 網格
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
     
-    modes = [("流年盤", c1, "流年"), ("流月盤", c2, "流月"), ("流日盤", c3, "流日"), ("流時盤", c4, "流時")]
+    base_html = st.session_state.birth_chart
+    
+    # 定義模式與欄位對應
+    modes = [("流年盤", col1, "流年"), ("流月盤", col2, "流月"), 
+             ("流日盤", col3, "流日"), ("流時盤", col4, "流時")]
+    
     for title, col, mode in modes:
         with col:
             st.markdown(f"#### {title}")
-            st.markdown(inject_transit_info(st.session_state.birth_chart, mode, 0), unsafe_html=True)
+            # 傳入 offset 0 進行測試
+            try:
+                transit_view = inject_transit_info(base_html, mode, 0)
+                st.markdown(transit_view, unsafe_html=True)
+            except Exception as e:
+                st.error(f"渲染失敗: {e}")
+else:
+    st.info("⚠️ 請先在左側輸入資料並點擊「1️⃣ 取得本命盤」。")
