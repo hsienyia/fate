@@ -17,11 +17,12 @@ with col2:
 with col3:
     day = st.number_input("出生日", min_value=1, max_value=31, value=10)
 
+# 🔥 修正1：將時辰傳遞的數值改為「實際 24 小時制代表的小時數」
 hours_map = {
-    "子時 (23:00 - 01:00)": "0", "丑時 (01:00 - 03:00)": "1", "寅時 (03:00 - 05:00)": "2",
-    "卯時 (05:00 - 07:00)": "3", "辰時 (07:00 - 09:00)": "4", "巳時 (09:00 - 11:00)": "5",
-    "午時 (11:00 - 13:00)": "6", "未時 (13:00 - 15:00)": "7", "申時 (15:00 - 17:00)": "8",
-    "酉時 (17:00 - 19:00)": "9", "戌時 (19:00 - 21:00)": "10", "亥時 (21:00 - 23:00)": "11"
+    "子時 (23:00 - 01:00)": "0", "丑時 (01:00 - 03:00)": "2", "寅時 (03:00 - 05:00)": "4",
+    "卯時 (05:00 - 07:00)": "6", "辰時 (07:00 - 09:00)": "8", "巳時 (09:00 - 11:00)": "10",
+    "午時 (11:00 - 13:00)": "12", "未時 (13:00 - 15:00)": "14", "申時 (15:00 - 17:00)": "16", 
+    "酉時 (17:00 - 19:00)": "18", "戌時 (19:00 - 21:00)": "20", "亥時 (21:00 - 23:00)": "22"
 }
 
 hour_label = st.selectbox("請選擇出生時辰", list(hours_map.keys()))
@@ -34,7 +35,6 @@ if st.button("開始排盤 🚀"):
 
     with st.spinner("🤖 正在啟動智慧偵測模式，分析網站表單結構..."):
         try:
-            # 使用 Session 保持連線狀態，讓網站覺得我們是一般使用者
             session = requests.Session()
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -43,7 +43,6 @@ if st.button("開始排盤 🚀"):
             
             url = "https://fate.windada.com/cgi-bin/fate"
             
-            # 【第一步】：先去首頁，抓取它真實的表單
             first_page = session.get(url, headers=headers)
             first_page.encoding = 'utf-8'
             soup = BeautifulSoup(first_page.text, 'html.parser')
@@ -53,7 +52,6 @@ if st.button("開始排盤 🚀"):
                 st.error("無法載入網站的輸入表單，可能被防護擋住了。")
                 st.stop()
                 
-            # 【第二步】：收集表單內所有的預設欄位與隱藏金鑰
             payload = {}
             for input_tag in form.find_all('input'):
                 name = input_tag.get('name')
@@ -68,7 +66,6 @@ if st.button("開始排盤 🚀"):
                     if options:
                         payload[name] = options[0].get('value', options[0].text)
 
-            # 【第三步】：智慧替換成我們的輸入值
             for key in payload.keys():
                 k_low = key.lower()
                 if "year" in k_low or key == "y":
@@ -82,12 +79,10 @@ if st.button("開始排盤 🚀"):
                 elif "sex" in k_low or "gen" in k_low:
                     payload[key] = gender_val
 
-            # 【第四步】：判斷要送到哪個網址
             action_url = form.get('action')
             submit_url = urljoin(url, action_url) if action_url else url
             method = form.get('method', 'get').lower()
 
-            # 【第五步】：送出真正的排盤請求
             if method == 'post':
                 res = session.post(submit_url, data=payload, headers=headers)
             else:
@@ -96,7 +91,6 @@ if st.button("開始排盤 🚀"):
             res.encoding = 'utf-8'
             res_soup = BeautifulSoup(res.text, 'html.parser')
             
-            # 【第六步】：嚴格尋找真正的紫微斗數命盤
             found_table = None
             max_td_count = 0
             
@@ -104,7 +98,6 @@ if st.button("開始排盤 🚀"):
                 text = table.get_text()
                 td_count = len(table.find_all('td'))
                 
-                # ✨ 關鍵條件：一定要有這些星星，才代表是算出來的結果！
                 if ("紫微" in text and "天機" in text) and td_count > max_td_count:
                     found_table = table
                     max_td_count = td_count
@@ -112,15 +105,23 @@ if st.button("開始排盤 🚀"):
             if found_table:
                 st.success("抓取成功！這才是真正的命盤 🎉")
                 st.markdown("---")
-                # 幫表格加上黑色實線框，看起來更專業
-                table_html = str(found_table).replace('<table', '<table border="1" style="width:100%; text-align:center; border-collapse: collapse; border-color: gray;"')
+                
+                # 🔥 修正2：解決中間文字隱形的問題
+                # 紫微命盤的正中間通常是一個大儲存格 (橫跨2格、直跨2格)
+                for td in found_table.find_all('td'):
+                    if td.get('colspan') == '2' and td.get('rowspan') == '2':
+                        # 強制把中間格子的背景塗白、文字塗黑
+                        td['style'] = 'background-color: #ffffff !important; color: #000000 !important; padding: 15px;'
+                        # 拔掉原本網站自帶的顏色設定
+                        for font in td.find_all('font'):
+                            if font.has_attr('color'):
+                                del font['color']
+                
+                # 幫整個表格加上乾淨的框線設計
+                table_html = str(found_table).replace('<table', '<table border="1" style="width:100%; text-align:center; border-collapse: collapse; border-color: #555555; background-color: #ffffff; color: #000000;"')
                 st.markdown(table_html, unsafe_allow_html=True)
             else:
-                st.warning("表單已經送出了，但網站還是沒有給出命盤。有可能是性別或時間格式網站有特殊規定。")
-                # 💡 這個區塊是給我們抓蟲用的，如果失敗你可以截圖這裡給我看！
-                with st.expander("👉 [除錯專用] 展開查看程式到底送了什麼資料給網站"):
-                    st.write("送出的方法：", method)
-                    st.write("送出的資料：", payload)
+                st.warning("表單已經送出了，但網站還是沒有給出命盤。")
 
         except Exception as e:
             st.error(f"發生錯誤：{e}")
