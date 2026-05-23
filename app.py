@@ -61,16 +61,16 @@ with col_right:
         else:
             st.error("請先取得本命盤！")
 
-# --- 3. 畫面顯示區 (修正重複渲染問題) ---
-# --- 修正後的顯示區塊 ---
+# --- 3. 畫面顯示區 (請用這段替換掉你原來的區塊) ---
+st.markdown("---")
+st.markdown("### ⚡ 本地端自動生成四盤")
+
 if st.session_state.birth_chart:
-    st.markdown("---")
-    st.markdown("### ⚡ 本地端自動生成四盤")
-    
+    # 這裡必須要有縮排，這就是錯誤訊息指出的地方
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
-    # 模式與欄位對應
+    # 定義模式
     mode_configs = [
         ("流年盤", col1, "流年"), 
         ("流月盤", col2, "流月"), 
@@ -81,16 +81,9 @@ if st.session_state.birth_chart:
     for title, col, mode_name in mode_configs:
         with col:
             st.markdown(f"#### {title}")
-            # 這裡傳入三個參數：(html, mode, 0)
+            # 這裡呼叫函式 (確保傳入三個參數：HTML, 模式名, 偏移量)
             transit_html = inject_transit_info(st.session_state.birth_chart, mode_name, 0)
-            # 使用 components.html 而不是 st.markdown
             components.html(transit_html, height=450, scrolling=True)
-            try:
-                # 呼叫 inject_transit_info
-                # 注意：你定義的 inject_transit_info 參數是 (html, mode, offset)，請補上第三個參數 0
-                transit_html = inject_transit_info(st.session_state.birth_chart, mode_name, 0)
-                components.html(transit_html, height=450, scrolling=True)
-            except Exception as e:
-                st.error(f"渲染錯誤: {e}")
 else:
+    # 這裡對應 if 的 else，也需要縮排
     st.info("請先輸入資料並點擊「1️⃣ 取得本命盤」。")
