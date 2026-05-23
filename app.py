@@ -3,8 +3,22 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import datetime
-import streamlit.components.v1 as components # 在檔案最上方加入這行
+import streamlit.components.v1 as components
+# 確保加入這些 Selenium 必要的引用
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
+
+def inject_transit_info(original_html, mode, offset):
+    soup = BeautifulSoup(original_html, 'html.parser')
+    table = soup.find('table')
+    if table:
+        header = soup.new_tag("div", style="color:red; font-weight:bold; text-align:center; margin-top:20px;")
+        header.string = f"--- {mode}運勢顯示中 ---"
+        table.insert_before(header)
+    return str(soup)
 # --- 工具函式 ---
 def get_chart_via_selenium(y, m, d, h):
     chrome_options = Options()
@@ -65,25 +79,22 @@ with col_right:
             st.error("請先取得本命盤！")
 
 # --- 3. 畫面顯示區 (改用 components.html 確保穩定) ---
-out_left, out_right = st.columns(2)
+st.markdown("### ⚡ 本地端自動生成四盤")
 
-with out_left:
-    st.markdown("<h3 style='text-align: center;'>🪐 本命盤</h3>", unsafe_allow_html=True)
-    if st.session_state.birth_chart:
-        # 使用 components.html 渲染，這是最穩定的顯示方式
-        components.html(st.session_state.birth_chart, height=800, scrolling=True)
-    else:
-        st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
-
-with out_right:
-    st.markdown("### ⚡ 四盤並列分析")
-    # 將視窗切分為四個小格
-    cols = st.columns(2) 
+if st.session_state.birth_chart:
+    base_html = st.session_state.birth_chart
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
     
-    # 這裡我們手動渲染四個不同的偏移結果
-    # 因為 component.html 有高度限制，這裡我們將四個盤疊加在同一個頁框中
-    full_view = (
-        f"<h3>流年</h3>{inject_transit_info(st.session_state.birth_chart, '流年', 0)}"
-        f"<h3>流月</h3>{inject_transit_info(st.session_state.birth_chart, '流月', 0)}"
-    )
-    components.html(full_view, height=1200, scrolling=True)
+    # 定義顯示清單
+    modes = [("流年盤", col1, "流年"), ("流月盤", col2, "流月"), 
+             ("流日盤", col3, "流日"), ("流時盤", col4, "流時")]
+    
+    for title, col, mode in modes:
+        with col:
+            st.markdown(f"#### {title}")
+            # 這裡呼叫函式
+            transit_html = inject_transit_info(base_html, mode, 0)
+            components.html(transit_html, height=600, scrolling=True)
+else:
+    st.info("請先取得本命盤")
