@@ -40,16 +40,26 @@ with col_left:
     sex = st.radio("性別", ["男", "女"], horizontal=True)
 
     if st.button("1️⃣ 取得本命盤"):
-        with st.spinner("正在進行連線握手..."):
+        with st.spinner("正在執行高權限連線..."):
             try:
-                # 關鍵修正：確保 Session 先訪問首頁獲取權限
-                url = "https://fate.windada.com/cgi-bin/fate"
+                # 1. 建立 Session
+                session = st.session_state.session
                 
-                # 第一步：先訪問首頁獲取必要的 Cookies 與 Session 狀態
-                st.session_state.session.get("https://fate.windada.com/", headers=HEADERS)
+                # 2. 獲取頁面以取得 Cookie 和隱藏表單欄位
+                # 這是最關鍵的一步：先讀取頁面中的 <input type="hidden">
+                init_res = session.get("https://fate.windada.com/cgi-bin/fate", headers=HEADERS)
+                soup = BeautifulSoup(init_res.text, 'html.parser')
+                form = soup.find('form')
                 
-                # 第二步：準備表單資料
-                data = {
+                # 抓取所有隱藏欄位 (這是防止被判斷為機器人的關鍵)
+                payload = {}
+                if form:
+                    for input_tag in form.find_all('input'):
+                        if input_tag.get('name'):
+                            payload[input_tag.get('name')] = input_tag.get('value', '')
+                
+                # 3. 填入你的資料 (覆蓋掉原始值)
+                payload.update({
                     "year": str(y), 
                     "month": str(m), 
                     "day": str(d), 
@@ -57,23 +67,27 @@ with col_left:
                     "sex": "1" if sex=="男" else "0", 
                     "type": "find", 
                     "place": "1"
-                }
+                })
                 
-                # 第三步：送出排盤請求
-                res = st.session_state.session.post(url, data=data, headers=HEADERS)
+                # 4. 發送請求
+                # 使用剛才抓到的 form action URL，確保路徑正確
+                post_url = urljoin("https://fate.windada.com/cgi-bin/fate", form.get('action', '')) if form else "https://fate.windada.com/cgi-bin/fate"
+                res = session.post(post_url, data=payload, headers=HEADERS)
                 
-                # 第四步：解析結果
-                soup = BeautifulSoup(res.text, 'html.parser')
-                tables = soup.find_all('table')
+                # 5. 解析與儲存
+                result_soup = BeautifulSoup(res.text, 'html.parser')
+                tables = result_soup.find_all('table')
                 
                 if tables:
-                    # 抓取最後一個包含命盤資訊的表格
+                    # 判斷是否抓到真的盤：通常有效的命盤表格裡會有「命宮」或特定中文字
                     st.session_state.birth_chart = str(tables[-1])
                     st.rerun()
                 else:
-                    st.error("伺服器回應了，但未包含有效的命盤表格。")
+                    st.error("未找到有效的命盤表格，網站可能已拒絕請求。")
+                    
             except Exception as e:
-                st.error(f"連線失敗: {e}")
+                st.error(f"錯誤細節: {e}")
+                
 
 with col_right:
     st.info("### 步驟二：設定流轉日期")
