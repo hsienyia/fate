@@ -174,40 +174,40 @@ with col_right:
 
         # 修正後的第二步按鈕邏輯
         if st.button("取得流時命盤"):
-        soup = BeautifulSoup(st.session_state.res1, 'html.parser')
-        form = soup.find('form')
-        
-        # --- 偵錯區：把所有 submit 按鈕的名字印出來 ---
-        buttons = form.find_all('input', {'type': 'submit'})
-        st.write("找到的按鈕名稱有：")
-        for btn in buttons:
-            st.write(f"Name: {btn.get('name')}, Value: {btn.get('value')}")
-        
-        # 準備 payload
-        payload = {inp.get('name'): inp.get('value', '') for inp in form.find_all('input') if inp.get('name')}
-        
-        # 注入日期
-        payload.update({
-            "FateYear": str(ty), "FateMonth": str(tm), "FateDay": str(td), 
-            "FateHour": "16"
-        })
-        
-        # 核心修改：不猜測名稱，從網頁抓到的按鈕中，直接尋找值為「流時」的那個
-        found_btn = False
-        for btn in buttons:
-            if btn.get('value') == '流時':
-                payload[btn.get('name')] = '流時'
-                found_btn = True
-                break
-        
-        if not found_btn:
-            st.warning("沒找到名為「流時」的按鈕，請看上面的偵錯清單確認正確名稱！")
+            soup = BeautifulSoup(st.session_state.res1, 'html.parser')
+            form = soup.find('form')
             
-        action_url = urljoin("https://fate.windada.com/cgi-bin/fate", form.get('action'))
-        res2 = st.session_state.session.post(action_url, data=payload, headers=HEADERS)
-        st.session_state.res2 = res2.text
-        st.session_state.step = 3
-        st.rerun()
+            # --- 偵錯區：把所有 submit 按鈕的名字印出來 ---
+            buttons = form.find_all('input', {'type': 'submit'})
+            st.write("找到的按鈕名稱有：")
+            for btn in buttons:
+                st.write(f"Name: {btn.get('name')}, Value: {btn.get('value')}")
+            
+            # 準備 payload
+            payload = {inp.get('name'): inp.get('value', '') for inp in form.find_all('input') if inp.get('name')}
+            
+            # 注入日期
+            payload.update({
+                "FateYear": str(ty), "FateMonth": str(tm), "FateDay": str(td), 
+                "FateHour": "16"
+            })
+            
+            # 核心修改：不猜測名稱，從網頁抓到的按鈕中，直接尋找值為「流時」的那個
+            found_btn = False
+            for btn in buttons:
+                if btn.get('value') == '流時':
+                    payload[btn.get('name')] = '流時'
+                    found_btn = True
+                    break
+            
+            if not found_btn:
+                st.warning("沒找到名為「流時」的按鈕，請看上面的偵錯清單確認正確名稱！")
+                
+            action_url = urljoin("https://fate.windada.com/cgi-bin/fate", form.get('action'))
+            res2 = st.session_state.session.post(action_url, data=payload, headers=HEADERS)
+            st.session_state.res2 = res2.text
+            st.session_state.step = 3
+            st.rerun()
                     
 st.markdown("---")
 
