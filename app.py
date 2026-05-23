@@ -7,13 +7,12 @@ import streamlit.components.v1 as components
 
 
 
-def inject_transit_info(original_html, mode):
-    # 強制使用 utf-8 處理
+def inject_transit_info(original_html, mode, offset): # 補上 offset 參數
     soup = BeautifulSoup(original_html.encode('latin1').decode('utf-8'), 'html.parser')
     table = soup.find('table')
     if table:
         header = soup.new_tag("div", style="color:red; font-weight:bold; text-align:center; margin-top:20px;")
-        header.string = f"--- {mode}運勢顯示中 ---"
+        header.string = f"--- {mode}運勢顯示中 (偏移:{offset}) ---"
         table.insert_before(header)
     return str(soup)
 
@@ -102,11 +101,11 @@ with col_right:
             st.error("請先取得本命盤！")
 
 # --- 3. 畫面顯示區 (修正重複渲染問題) ---
+# --- 修正後的顯示區塊 ---
 if st.session_state.birth_chart:
     st.markdown("---")
     st.markdown("### ⚡ 本地端自動生成四盤")
     
-    # 建立 2x2 佈局
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
@@ -121,6 +120,10 @@ if st.session_state.birth_chart:
     for title, col, mode_name in mode_configs:
         with col:
             st.markdown(f"#### {title}")
+            # 這裡傳入三個參數：(html, mode, 0)
+            transit_html = inject_transit_info(st.session_state.birth_chart, mode_name, 0)
+            # 使用 components.html 而不是 st.markdown
+            components.html(transit_html, height=450, scrolling=True)
             try:
                 # 呼叫 inject_transit_info
                 # 注意：你定義的 inject_transit_info 參數是 (html, mode, offset)，請補上第三個參數 0
