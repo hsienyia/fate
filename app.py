@@ -40,11 +40,9 @@ with col_left:
     h_label = st.selectbox("時辰", list(hours_map.keys()), index=8)
     sex = st.radio("性別", ["男", "女"], horizontal=True)
 
-    if st.button("🚀 生成全部流轉盤"):
+    if st.button("🚀 生成全部流轉盤", key="btn_generate_transit"):
         if st.session_state.birth_chart:
-            # 我們直接在本地處理，不再進行網路請求，徹底避開網站限制
-            st.session_state.do_render = True 
-            st.rerun()
+            st.session_state.do_render = True
         else:
             st.error("請先取得本命盤！")
                 
@@ -55,11 +53,7 @@ with col_right:
     tm = st.number_input("流時月", value=5)
     td = st.number_input("流時日", value=23)
     
-    if st.button("🚀 生成全部流轉盤"):
-        if st.session_state.birth_chart:
-            st.session_state.do_render = True
-        else:
-            st.error("請先取得本命盤！")
+    
 
 # --- 3. 畫面顯示區 (請用這段替換掉你原來的區塊) ---
 st.markdown("---")
