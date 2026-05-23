@@ -166,21 +166,27 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：精準匹配按鈕名稱版
+        # 第二步按鈕：直接定義內部變數，避免 Scope Error
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在精準對接流時服務器..."):
+            with st.spinner("正在執行精準排盤..."):
                 try:
-                    # 1. 取得第一步殘留的 Session 與表單
+                    # 重新定義 headers，保證變數絕對存在
+                    local_headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+                        "Referer": "https://fate.windada.com/"
+                    }
+                    
                     session = requests.Session()
                     if st.session_state.cookies:
                         session.cookies.update(st.session_state.cookies)
                     
+                    # 取得表單金鑰
                     transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 2. 設定日期參數
+                    # 寫入時間參數
                     final_payload.update({
                         'FateYear': str(t_year),
                         'FateMonth': str(t_month),
@@ -189,30 +195,30 @@ with col_right:
                         'calday': '流時'
                     })
                     
-                    # 3. 關鍵修正：找出表單中名為 "流時" 的按鈕，將其 name 和 value 加入 POST 資料
-                    # 這會欺騙伺服器，讓它以為你真的按了那個按鈕
+                    # 強制補上那個關鍵按鈕的 name/value
+                    # 網站是透過 value='流時' 來判斷的
                     for btn in transit_soup.find_all(['input', 'button']):
                         if btn.get('value') == '流時':
                             final_payload[btn.get('name')] = '流時'
                             break
                     
-                    # 4. 發送請求
-                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
+                    # 發送請求
+                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=local_headers)
                     res_transit.encoding = 'utf-8'
                     
-                    # 5. 驗證結果
-                    transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
+                    # 驗證並顯示
+                    res_soup = BeautifulSoup(res_transit.text, 'html.parser')
                     transit_table = None
-                    for table in transit_soup_res.find_all('table'):
+                    for table in res_soup.find_all('table'):
                         if "紫微" in table.get_text() and "流時" in table.get_text():
                             transit_table = table
                             break
-                    
+                            
                     if transit_table:
                         st.session_state.transit_chart = str(transit_table)
                         st.rerun()
                     else:
-                        st.error("伺服器已接收請求，但未返回正確的流時盤。請檢查「流月起始宮位」。")
+                        st.error("伺服器回應成功，但未解析到流時盤內容。請檢查步驟二設定。")
 
                 except Exception as e:
                     st.error(f"第二步發生錯誤：{e}")
