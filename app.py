@@ -172,21 +172,20 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：強制觸發版
+        # 修正後的第二步按鈕邏輯
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在進行最終排盤匹配..."):
+            with st.spinner("正在模擬按下「流時」按鈕..."):
                 try:
                     session = requests.Session()
                     if st.session_state.cookies:
                         session.cookies.update(st.session_state.cookies)
                     
-                    # 獲取表單結構
-                    transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
+                    # 1. 複製所有表單資料
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 填入時間資料
+                    # 2. 填入你的目標日期
                     final_payload.update({
                         'FateYear': str(t_year),
                         'FateMonth': str(t_month),
@@ -194,58 +193,19 @@ with col_right:
                         'FateHour': str(t_hour_val)
                     })
                     
-                    # 強制觸發：在表單中搜尋任何包含 'cal' 的 submit 按鈕
-                    # 這是最暴力也最有效的做法
-                    submitted = False
-                    for inp in transit_soup.find_all('input'):
-                        if inp.get('type') == 'submit' and 'cal' in inp.get('name', ''):
-                            # 如果按鈕的值是「流時」，就強制送出它
-                            if inp.get('value') == '流時':
-                                final_payload[inp.get('name')] = '流時'
-                                submitted = True
-                                break
+                    # 3. 【核心修正】強制補上網站判定「點擊流時」的參數
+                    # 觀察你的截圖，網頁上有一個 <input type="submit" name="caltime" value="流時">
+                    # 我們必須確保這個 name="caltime" value="流時" 被送出
+                    final_payload['caltime'] = '流時'
                     
-                    # 若依然沒抓到，嘗試直接指定網站特定的名稱 (這是最後手段)
-                    if not submitted:
-                        final_payload['calday'] = '流時'
-                    
-                    # 發送請求
+                    # 4. 發送請求
                     res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
                     res_transit.encoding = 'utf-8'
-
-                    # 1. 直接顯示網頁標題或部分內容，看看是不是真的切換到流時頁面了
-                    st.write("--- 偵錯資訊 ---")
-                    if "流時" in res_transit.text:
-                        st.success("網頁原始碼中確實包含「流時」關鍵字！")
-                    else:
-                        st.warning("網頁原始碼中沒有「流時」關鍵字，代表參數還是沒生效。")
                     
-                    # 2. 把網頁上所有的 Table 表格都印出來，不篩選！
-                    soup_res = BeautifulSoup(res_transit.text, 'html.parser')
-                    tables = soup_res.find_all('table')
-                    st.write(f"共找到 {len(tables)} 個表格")
-                    
-                    for i, table in enumerate(tables):
-                        st.write(f"表格 {i}:")
-                        st.markdown(str(table), unsafe_allow_html=True)
-                    
-                    # 驗證內容
-                    if "紫微" in res_transit.text and "流時" in res_transit.text:
-                        transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
-                        # 找到命盤表格
-                        transit_table = None
-                        for table in transit_soup_res.find_all('table'):
-                            if "紫微" in table.get_text() and "流時" in table.get_text():
-                                transit_table = table
-                                break
-                        
-                        if transit_table:
-                            st.session_state.transit_chart = str(transit_table)
-                            st.rerun()
-                        else:
-                            st.error("已送出請求，但無法解析到命盤內容。")
-                    else:
-                        st.error("未能觸發流時盤，網站未正確回應請求。")
+                    # 5. 驗證並顯示 (跳過不需要的表格，直接抓流時盤)
+                    st.success("請求已送出！正在解析結果...")
+                    st.session_state.transit_chart = res_transit.text
+                    st.rerun()
 
                 except Exception as e:
                     st.error(f"錯誤：{e}")
