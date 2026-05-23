@@ -87,23 +87,30 @@ with col_right:
         else:
             st.error("請先取得本命盤！")
 
-# --- 3. 畫面顯示區 (改用 components.html 確保穩定) ---
-st.markdown("### ⚡ 本地端自動生成四盤")
+# --- 3. 畫面顯示區 ---
+st.markdown("---")
+st.markdown("### 🪐 本命盤與四重流轉對照")
 
+# 1. 顯示本命盤 (置中且顯眼)
 if st.session_state.birth_chart:
-    base_html = st.session_state.birth_chart
+    st.markdown("#### 核心：本命盤")
+    components.html(st.session_state.birth_chart, height=600, scrolling=True)
+    
+    st.markdown("---")
+    st.markdown("#### 流轉分析 (流年 / 流月 / 流日 / 流時)")
+    
+    # 2. 顯示四個流轉盤
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
-    # 定義顯示清單
     modes = [("流年盤", col1, "流年"), ("流月盤", col2, "流月"), 
              ("流日盤", col3, "流日"), ("流時盤", col4, "流時")]
     
     for title, col, mode in modes:
         with col:
-            st.markdown(f"#### {title}")
-            # 這裡呼叫函式
-            transit_html = inject_transit_info(base_html, mode, 0)
-            components.html(transit_html, height=600, scrolling=True)
+            st.markdown(f"**{title}**")
+            # 這裡呼叫你的注入函式，將模式名稱標記在盤面上
+            transit_html = inject_transit_info(st.session_state.birth_chart, mode, 0)
+            components.html(transit_html, height=500, scrolling=True)
 else:
-    st.info("請先取得本命盤")
+    st.info("請先匯入本命盤 HTML 以開始排盤。")
