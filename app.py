@@ -292,8 +292,8 @@ def calculate_single_board_score(html_content, mode):
         (cai, False, "流轉財帛"), (guan, False, "流轉事業")
     ]
 
-    score = 50
-    process_log = ["**🔹 基礎起算分: 50 分 (嚴格風控模式)**"]
+    score = 60
+    process_log = ["**🔹 基礎起算分: 60 分 (嚴格風控模式)**"]
     
     for p_text, is_mqf, p_name in palaces_to_check:
         # 1. 祿、權、科
