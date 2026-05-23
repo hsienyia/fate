@@ -172,38 +172,71 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：改用 URL 參數強制導向 (最直接的觸發方式)
-        # 將「取得本命」與「流時疊加」合併為一次請求
+        # 第二步按鈕：使用精準的 HTML 表單對應 Payload
         if st.button("🚀 一次執行排盤與流時", use_container_width=True):
-            with st.spinner("正在執行完整排盤請求..."):
+            with st.spinner("正在向伺服器請求流轉盤..."):
                 try:
-                    # 1. 直接建立完整的 Payload
-                    # 這是最底層的參數集，Windada 這類網站通常接收這組組合拳
+                    # 1. 重新建立 Session 並載入步驟一取得的 Cookie
+                    session = requests.Session()
+                    if st.session_state.cookies:
+                        requests.utils.add_dict_to_cookiejar(session.cookies, st.session_state.cookies)
+                    
+                    # 2. 根據查詢模式對應 HTML 中的 Target 參數
+                    # 3=流年, 4=流月, 5=流日, 6=流時
+                    target_map = {"流年": "3", "流月": "4", "流日": "5", "流時": "6"}
+                    target_val = target_map[transit_type]
+                    
+                    # 3. 建立完全符合網站原始碼的 Payload
                     payload = {
-                        "year": str(year),
-                        "month": str(month),
-                        "day": str(day),
-                        "hour": hours_map[hour_label],
-                        "sex": "1" if gender_label == "男" else "0",
-                        "type": "find", # 必須包含查詢動作
-                        "place": "1",
-                        # 加入流時參數
+                        "FUNC": "Basic",
+                        "Name": "",
+                        "Solar": "1", # 本命國曆
+                        "Year": str(year),
+                        "Month": str(month),
+                        "Day": str(day),
+                        "Hour": hours_map[hour_label],
+                        "Sex": "1" if gender_label == "男" else "0",
+                        "Target": target_val, # 動態對應流年/月/日/時
+                        "SubTarget": "0",
+                        "Old": "0",
+                        "FateYearType": "0" if transit_start == "流年本宮" else "1",
+                        "FateSolar": "0", # 流轉日期 (預設為農曆，對應 HTML 的 option 0)
                         "FateYear": str(t_year),
                         "FateMonth": str(t_month),
                         "FateDay": str(t_day),
-                        "FateHour": hours_map[t_hour_label],
-                        "calday": "流時"
+                        "FateHour": hours_map[t_hour_label]
                     }
                     
-                    # 2. 直接 POST 到查詢 URL
+                    # 4. 發送請求
                     response = session.post("https://fate.windada.com/cgi-bin/fate", data=payload, headers=HEADERS)
+                    response.encoding = 'utf-8'
                     
-                    # 3. 檢查結果
-                    if "紫微" in response.text:
-                        st.session_state.transit_chart = response.text
+                    # 5. 解析回傳的流轉盤
+                    transit_soup = BeautifulSoup(response.text, 'html.parser')
+                    transit_table = None
+                    max_td_count = 0
+                    
+                    for table in transit_soup.find_all('table'):
+                        text = table.get_text()
+                        td_count = len(table.find_all('td'))
+                        # 尋找真正的命盤表格 (包含 12 宮位)
+                        if ("紫微" in text and "天機" in text) and td_count > max_td_count:
+                            transit_table = table
+                            max_td_count = td_count
+                            
+                    if transit_table:
+                        st.session_state.transit_chart = str(transit_table)
+                        
+                        # 順便抓取網站上方的藍色標題 (例如: 流時：農曆2026年5月...)
+                        header_tag = transit_soup.find('font', color='blue')
+                        if header_tag:
+                            st.session_state.transit_header = f"<h3>{header_tag.get_text()}</h3>"
+                        else:
+                            st.session_state.transit_header = f"<h3>{transit_type}運勢盤</h3>"
+                            
                         st.rerun()
                     else:
-                        st.error("請求失敗，可能網站已鎖死 Session。")
+                        st.error("請求失敗，可能網站已鎖死 Session 或參數有誤。")
                         
                 except Exception as e:
                     st.error(f"錯誤：{e}")
