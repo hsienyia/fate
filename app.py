@@ -9,9 +9,11 @@ st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layo
 st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
 st.write("完全模擬網站流程：先取得本命盤 ➔ 再疊加流時盤")
 
-# --- 初始化暫存區 (用來記憶第一步的資料) ---
+# --- 初始化暫存區 (用來記憶第一步的資料與連線狀態) ---
 if "step1_done" not in st.session_state:
     st.session_state.step1_done = False
+if "cookies" not in st.session_state:
+    st.session_state.cookies = None
 if "birth_chart" not in st.session_state:
     st.session_state.birth_chart = None
 if "transit_form_data" not in st.session_state:
@@ -54,11 +56,12 @@ with col_left:
             
             with st.spinner("正在抓取本命盤..."):
                 try:
+                    session = requests.Session()
                     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"}
                     url = "https://fate.windada.com/cgi-bin/fate"
                     
                     # 獲取表單結構
-                    res_init = requests.get(url, headers=headers)
+                    res_init = session.get(url, headers=headers)
                     res_init.encoding = 'utf-8'
                     soup_init = BeautifulSoup(res_init.text, 'html.parser')
                     form = soup_init.find('form')
@@ -72,12 +75,20 @@ with col_left:
                             opts = sel.find_all('option')
                             if opts: payload[sel.get('name')] = opts[0].get('value', opts[0].text)
 
-                    payload.update({"year": str(year), "month": str(month), "day": str(day), "hour": hour_val, "sex": gender_val})
+                    # 🔥 補回漏掉的關鍵參數：type 和 place
+                    payload.update({
+                        "year": str(year), "month": str(month), "day": str(day), 
+                        "hour": hour_val, "sex": gender_val,
+                        "type": "find", "place": "1"
+                    })
                     
                     action_url = urljoin(url, form.get('action'))
-                    res_birth = requests.post(action_url, data=payload, headers=headers)
+                    res_birth = session.post(action_url, data=payload, headers=headers)
                     res_birth.encoding = 'utf-8'
                     birth_soup = BeautifulSoup(res_birth.text, 'html.parser')
+                    
+                    # 儲存連線的 Cookies 給第二步用
+                    st.session_state.cookies = session.cookies.get_dict()
                     
                     # 儲存本命盤 HTML
                     for table in birth_soup.find_all('table'):
@@ -85,7 +96,7 @@ with col_left:
                             st.session_state.birth_chart = str(table)
                             break
                             
-                    # 🔥 關鍵：把流年表單裡的隱藏金鑰「全部」存下來，留給步驟二使用
+                    # 把流年表單裡的隱藏金鑰「全部」存下來
                     transit_form = birth_soup.find('form')
                     t_payload = {}
                     if transit_form:
@@ -94,7 +105,6 @@ with col_left:
                             if not name: continue
                             itype = inp.get('type', '').lower()
                             if itype in ['submit', 'reset', 'button']: continue
-                            # 處理單選框
                             if itype in ['radio', 'checkbox'] and not inp.has_attr('checked'): continue
                             t_payload[name] = inp.get('value', '')
                             
@@ -108,13 +118,12 @@ with col_left:
                         st.session_state.submit_url = urljoin(action_url, transit_form.get('action'))
                         st.session_state.step1_done = True
                         st.session_state.transit_chart = None # 清空舊的流時盤
-                        st.rerun() # 重新整理畫面顯示右邊
+                        st.rerun() # 重新整理畫面
 
                 except Exception as e:
                     st.error(f"第一步發生錯誤：{e}")
 
 with col_right:
-    # 只有完成第一步，右邊才會變色並允許操作
     st.info("### 步驟二：設定流轉日期")
     with st.container(border=True):
         tc1, tc2, tc3 = st.columns(3)
@@ -131,23 +140,27 @@ with col_right:
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在送出第二頁參數..."):
+            with st.spinner("正在送出流時參數..."):
                 try:
+                    session = requests.Session()
+                    if st.session_state.cookies:
+                        session.cookies.update(st.session_state.cookies)
+                    
                     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"}
                     
-                    # 載入步驟一偷存下來的表單資料
+                    # 載入步驟一記憶的隱藏金鑰
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 覆寫流年參數
+                    # 精準覆寫流轉專用參數，保留出生的年份不動！
                     final_payload['FateSolar'] = "1" # 國曆
                     final_payload['FateYear'] = str(t_year)
                     final_payload['FateMonth'] = str(t_month)
                     final_payload['FateDay'] = str(t_day)
                     final_payload['FateHour'] = str(t_hour_val)
                     final_payload['Target'] = "0" if transit_start == "流年本宮" else "1"
-                    final_payload['calday'] = transit_type # 模擬按下該按鈕 (如：流時)
+                    final_payload['calday'] = transit_type # 例如送出 "流時"
                     
-                    res_transit = requests.post(st.session_state.submit_url, data=final_payload, headers=headers)
+                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=headers)
                     res_transit.encoding = 'utf-8'
                     transit_soup = BeautifulSoup(res_transit.text, 'html.parser')
                     
@@ -188,6 +201,6 @@ with out_right:
         st.markdown(f"<div style='text-align: center;'>{st.session_state.transit_header}</div>", unsafe_allow_html=True)
         st.markdown(st.session_state.transit_chart, unsafe_allow_html=True)
     elif st.session_state.step1_done:
-        st.info("請設定上方流時參數後，點擊「疊加流轉盤」。")
+        st.info("請設定上方流轉日期後，點擊「疊加流轉盤」。")
     else:
         st.info("等待步驟一完成。")
