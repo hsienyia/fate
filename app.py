@@ -355,7 +355,7 @@ def calculate_single_board_score(html_content, mode):
             score -= 20
             process_log.append(f"❌ `{p_name}` 逢地劫星 (-40分)")
         elif has_kong_soft:
-            score -= 10
+            score -= 5
             process_log.append(f"❌ `{p_name}` 逢旬空/天空星 (-20分)")
                 
         ji_count = len(re.findall(r'忌', p_text))
