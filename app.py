@@ -239,7 +239,7 @@ st.markdown("---")
 # --- 升級版：疊加算分引擎與詳細計算過程 ---
 def calculate_single_board_score(html_content, mode):
     if not html_content:
-        return 60, ["無資料，給予基準分: 60分"]
+        return 50, ["無資料，給予基準分: 50分"]
         
     # 時間濾鏡：避免長週期盤受到短週期星曜干擾
     if mode == "流年盤": html_content = re.sub(r'流[月日時][祿權科忌]', '', html_content)
@@ -248,7 +248,7 @@ def calculate_single_board_score(html_content, mode):
 
     soup = BeautifulSoup(html_content, 'html.parser')
     cells = soup.find_all('td', width="25%")
-    if len(cells) != 12: return 60, ["格式錯誤，給予基準分: 60分"]
+    if len(cells) != 12: return 50, ["格式錯誤，給予基準分: 50分"]
 
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
@@ -259,7 +259,7 @@ def calculate_single_board_score(html_content, mode):
             ming_pos = i
             break
             
-    if ming_pos == -1: return 60, ["找不到命宮，給予基準分: 60分"]
+    if ming_pos == -1: return 50, ["找不到命宮，給予基準分: 50分"]
 
     ming = cell_texts[clockwise_indices[ming_pos]]
     fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
@@ -272,8 +272,9 @@ def calculate_single_board_score(html_content, mode):
         (cai, False, "財帛"), (guan, False, "事業")
     ]
 
-    score = 60
-    process_log = ["**🔹 基礎起算分: 60 分**"]
+    # 嚴格版：基礎起算分降為 50
+    score = 50
+    process_log = ["**🔹 基礎起算分: 50 分 (嚴格風控模式)**"]
     
     for p_text, is_mqf, p_name in palaces_to_check:
         # 1. 祿、權、科
@@ -291,7 +292,7 @@ def calculate_single_board_score(html_content, mode):
             score += pts
             process_log.append(f"✅ `{p_name}` 見權/科 x{quan_count+ke_count} (+{pts}分)")
         
-        # 2. 財星群聚
+        # 2. 財星群聚 (每顆財星 +5 分，更細緻)
         wealth_stars = sum(1 for star in ["武曲", "太陰", "天府"] if star in p_text)
         if "貪狼" in p_text and any(s in p_text for s in ["紅鸞", "天喜", "咸池", "天姚", "沐浴"]):
             wealth_stars += 1
@@ -301,7 +302,7 @@ def calculate_single_board_score(html_content, mode):
             process_log.append(f"✅ `{p_name}` 陽梁蔭星財 (+加計1財星)")
             
         if wealth_stars > 0:
-            pts = wealth_stars * 10
+            pts = wealth_stars * 5 # 每顆財星給 5 分
             score += pts
             process_log.append(f"💰 `{p_name}` 財星數量 x{wealth_stars} (+{pts}分)")
         
@@ -313,41 +314,44 @@ def calculate_single_board_score(html_content, mode):
             process_log.append(f"🐎 `{p_name}` 見天馬 x{ma_count} (+{pts}分)")
             
             if lu_count > 0:
-                score += 20
-                process_log.append(f"🔥 `{p_name}` 祿馬交馳爆發 (+20分)")
+                score += 15 # 祿馬交馳
+                process_log.append(f"🔥 `{p_name}` 祿馬交馳爆發 (+15分)")
             if "陀" in p_text:
-                score -= 15
-                process_log.append(f"⚠️ `{p_name}` 陀羅折足馬 (-15分)")
+                score -= 20 # 嚴格：陀羅遇天馬
+                process_log.append(f"⚠️ `{p_name}` 陀羅折足馬 (-20分)")
             
-        # 4. 嚴格扣分區 (命遷福)
+        # 4. 嚴格扣分區 (命遷福專屬)
         if is_mqf:
             has_kong = "地空" in p_text or "天空" in p_text
             has_jie = "地劫" in p_text
             
+            # 嚴格：空劫同宮扣 50，單見扣 20
             if has_kong and has_jie:
-                score -= 30
-                process_log.append(f"❌ `{p_name}` 空劫同宮重傷 (-30分)")
+                score -= 50
+                process_log.append(f"❌ `{p_name}` 空劫同宮重傷 (-50分)")
             elif has_kong:
-                score -= 10
-                process_log.append(f"❌ `{p_name}` 逢空星 (-10分)")
+                score -= 20
+                process_log.append(f"❌ `{p_name}` 逢空星 (-20分)")
             elif has_jie:
-                score -= 10
-                process_log.append(f"❌ `{p_name}` 逢劫星 (-10分)")
+                score -= 20
+                process_log.append(f"❌ `{p_name}` 逢劫星 (-20分)")
                 
+            # 嚴格：忌煞一顆扣 20
             ji_count = len(re.findall(r'忌', p_text))
             if ji_count > 0:
                 is_exempt = any(f"{star}廟" in p_text or f"{star}旺" in p_text for star in ["武曲", "太陰", "太陽", "天機", "天同"])
                 if is_exempt:
                     process_log.append(f"🛡️ `{p_name}` 逢忌，但廟旺豁免 (不扣分)")
                 else:
-                    pts = ji_count * 10
+                    pts = ji_count * 20
                     score -= pts
                     process_log.append(f"❌ `{p_name}` 逢忌煞 x{ji_count} (-{pts}分)")
 
     final_score = max(0, min(100, score))
     if score != final_score:
-        process_log.append(f"📊 結算溢出調整: 原始 {score} 分 ➔ 最終 {final_score} 分")
+        process_log.append(f"📊 結算溢出調整: 原始 {score} 分 ➔ 最終限制在 {final_score} 分")
     return final_score, process_log
+    
 
 def get_total_luck_index(charts_dict):
     if not charts_dict or len(charts_dict) < 4:
