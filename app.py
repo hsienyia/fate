@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import datetime
+import streamlit.components.v1 as components
 
 # --- 全域設定：確保不會再出現 name 'HEADERS' is not defined ---
 HEADERS = {
