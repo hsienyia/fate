@@ -166,72 +166,64 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：最終修正版
+        # 第二步按鈕：強制觸發版
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在進行最後排錯嘗試..."):
+            with st.spinner("正在進行最終排盤匹配..."):
                 try:
                     session = requests.Session()
                     if st.session_state.cookies:
                         session.cookies.update(st.session_state.cookies)
                     
-                    local_headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-                        "Referer": "https://fate.windada.com/cgi-bin/fate"
-                    }
-                    
-                    # 獲取第一步的 Form 結構
+                    # 獲取表單結構
                     transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 設定所有可能的流時相關參數
+                    # 填入時間資料
                     final_payload.update({
                         'FateYear': str(t_year),
                         'FateMonth': str(t_month),
                         'FateDay': str(t_day),
-                        'FateHour': str(t_hour_val),
-                        'calday': '流時',
-                        'Target': "0" if transit_start == "流年本宮" else "1"
+                        'FateHour': str(t_hour_val)
                     })
                     
-                    # 關鍵修正：不僅送出 name/value，我們還檢查 form 內所有其他隱藏 input
-                    # 這能防止因缺少某些隱藏 Token 而導致伺服器拒絕請求
-                    for inp in transit_soup.find_all('input', {'type': 'hidden'}):
-                        final_payload[inp.get('name')] = inp.get('value', '')
-                    
-                    # 強制補上一個觸發點，確保它認為我們點擊了按鈕
-                    final_payload['submit'] = '流時'
-                    
-                    # 發送 POST
-                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=local_headers)
-                    res_transit.encoding = 'utf-8'
-                    
-                    # 深度檢查結果
-                    res_soup = BeautifulSoup(res_transit.text, 'html.parser')
-                    transit_table = None
-                    
-                    # 搜尋所有 table，優先找含有「流時」文字的
-                    for table in res_soup.find_all('table'):
-                        text = table.get_text()
-                        if "紫微" in text and "天機" in text:
-                            # 放寬判定：只要有流時資訊就抓
-                            if "流時" in text:
-                                transit_table = table
+                    # 強制觸發：在表單中搜尋任何包含 'cal' 的 submit 按鈕
+                    # 這是最暴力也最有效的做法
+                    submitted = False
+                    for inp in transit_soup.find_all('input'):
+                        if inp.get('type') == 'submit' and 'cal' in inp.get('name', ''):
+                            # 如果按鈕的值是「流時」，就強制送出它
+                            if inp.get('value') == '流時':
+                                final_payload[inp.get('name')] = '流時'
+                                submitted = True
                                 break
                     
-                    # 如果連上面的都找不到，我們找整個頁面最後一個命盤表格
-                    if not transit_table:
-                        tables = res_soup.find_all('table')
-                        if len(tables) > 1:
-                            transit_table = tables[-1]
-                            
-                    if transit_table:
-                        st.session_state.transit_chart = str(transit_table)
-                        st.rerun()
+                    # 若依然沒抓到，嘗試直接指定網站特定的名稱 (這是最後手段)
+                    if not submitted:
+                        final_payload['calday'] = '流時'
+                    
+                    # 發送請求
+                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
+                    res_transit.encoding = 'utf-8'
+                    
+                    # 驗證內容
+                    if "紫微" in res_transit.text and "流時" in res_transit.text:
+                        transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
+                        # 找到命盤表格
+                        transit_table = None
+                        for table in transit_soup_res.find_all('table'):
+                            if "紫微" in table.get_text() and "流時" in table.get_text():
+                                transit_table = table
+                                break
+                        
+                        if transit_table:
+                            st.session_state.transit_chart = str(transit_table)
+                            st.rerun()
+                        else:
+                            st.error("已送出請求，但無法解析到命盤內容。")
                     else:
-                        st.write("排錯提示：伺服器回傳內容未包含流時盤表格。")
-                        st.text(res_transit.text[:1000]) # 印出網頁原始碼讓你確認
+                        st.error("未能觸發流時盤，網站未正確回應請求。")
 
                 except Exception as e:
                     st.error(f"錯誤：{e}")
