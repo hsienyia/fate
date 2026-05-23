@@ -173,69 +173,50 @@ with col_right:
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
         # 第二步按鈕：改用 URL 參數強制導向 (最直接的觸發方式)
-        # 第二步按鈕：精準按鈕觸發最終版
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
-            t_hour_val = hours_map[t_hour_label]
-            
-            with st.spinner("正在模擬最後一擊..."):
+            with st.spinner("正在進行最後底層匹配..."):
                 try:
-                    session = requests.Session()
-                    if st.session_state.cookies:
-                        session.cookies.update(st.session_state.cookies)
+                    # 1. 強制設定更完整的瀏覽器特徵 (偽裝成完全合法的瀏覽器)
+                    custom_headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                        "Referer": "https://fate.windada.com/cgi-bin/fate",
+                        "Origin": "https://fate.windada.com",
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    }
                     
-                    # 1. 取得第一步的 Form 結構
-                    transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
-                    final_payload = st.session_state.transit_form_data.copy()
+                    # 2. 準備 payload，這次我們保留網站 Form 的原始鍵值
+                    payload = st.session_state.transit_form_data.copy()
                     
-                    # 2. 設定日期參數
-                    final_payload.update({
+                    # 3. 注入時間參數
+                    payload.update({
                         'FateYear': str(t_year),
                         'FateMonth': str(t_month),
                         'FateDay': str(t_day),
-                        'FateHour': str(t_hour_val)
+                        'FateHour': str(hours_map[t_hour_label]),
+                        'calday': '流時' # 關鍵觸發器
                     })
                     
-                    # 3. 【最關鍵修改】：尋找網站上正確的觸發鍵名
-                    # 我們不僅找 value="流時"，我們還把該按鈕的 name 整個放入 payload
-                    submitted_button = False
-                    for btn in transit_soup.find_all(['input', 'button']):
-                        if btn.get('type') == 'submit':
-                            # 這是網站觸發流時的機制，我們嘗試抓取所有可能的 submit 名稱
-                            # 只要這個 name 出現在 payload 裡，伺服器就會認為被點擊了
-                            btn_name = btn.get('name')
-                            btn_value = btn.get('value')
-                            if btn_name:
-                                final_payload[btn_name] = btn_value
-                                if btn_value == '流時':
-                                    submitted_button = True
+                    # 4. 關鍵差異：有些網站會檢查是否送出了特定的隱藏輸入框，我們把所有原始 form 欄位都補上
+                    # 如果該網站的流時盤有特定的 hidden 欄位，這步能補齊
                     
-                    # 4. 發送 POST 請求
-                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=HEADERS)
-                    res_transit.encoding = 'utf-8'
+                    # 5. 發送 POST 請求
+                    response = st.session_state.session.post(
+                        st.session_state.submit_url, 
+                        data=payload, 
+                        headers=custom_headers
+                    )
                     
-                    # 5. 驗證結果
-                    if "紫微" in res_transit.text and "流時" in res_transit.text:
-                        transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
-                        transit_table = None
-                        # 找含有流時資訊的表格
-                        for table in transit_soup_res.find_all('table'):
-                            if "流時" in table.get_text():
-                                transit_table = table
-                                break
-                        
-                        if transit_table:
-                            st.session_state.transit_chart = str(transit_table)
-                            st.rerun()
-                        else:
-                            st.error("請求成功，但伺服器未返回預期的流時盤表格。")
+                    # 6. 分析回傳內容
+                    if "紫微" in response.text and "流時" in response.text:
+                        st.session_state.transit_chart = response.text
+                        st.rerun()
                     else:
-                        st.error("未能觸發流時盤，網站回應內容無流時關鍵字。")
-                        # 顯示回傳內容供確認
-                        st.text(res_transit.text[:500])
+                        st.error("伺服器回應了，但內容依然未包含流時盤資訊。")
+                        st.text("回傳內容前 500 字:")
+                        st.text(response.text[:500])
 
                 except Exception as e:
                     st.error(f"錯誤：{e}")
-
 
 st.markdown("---")
 
