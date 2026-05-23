@@ -346,16 +346,16 @@ def calculate_single_board_score(html_content, mode):
         has_jie_hard = "地劫" in p_text
             
         if has_kong_hard and has_jie_hard:
-            score -= 50
+            score -= 30
             process_log.append(f"❌ `{p_name}` 地空地劫同宮重傷 (-100分)")
         elif has_kong_hard:
-            score -= 20
+            score -= 10
             process_log.append(f"❌ `{p_name}` 逢地空星 (-40分)")
         elif has_jie_hard:
-            score -= 20
+            score -= 10
             process_log.append(f"❌ `{p_name}` 逢地劫星 (-40分)")
         elif has_kong_soft:
-            score -= 0
+            score -= 5
             process_log.append(f"❌ `{p_name}` 逢旬空/天空星 (-20分)")
                 
         ji_count = len(re.findall(r'忌', p_text))
