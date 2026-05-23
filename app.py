@@ -7,15 +7,15 @@ import streamlit.components.v1 as components
 
 
 
-def inject_transit_info(original_html, mode, offset):
-    soup = BeautifulSoup(original_html, 'html.parser')
+def inject_transit_info(original_html, mode):
+    # 強制使用 utf-8 處理
+    soup = BeautifulSoup(original_html.encode('latin1').decode('utf-8'), 'html.parser')
     table = soup.find('table')
     if table:
         header = soup.new_tag("div", style="color:red; font-weight:bold; text-align:center; margin-top:20px;")
         header.string = f"--- {mode}運勢顯示中 ---"
         table.insert_before(header)
     return str(soup)
-
 
 # --- 全域設定 ---
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0", "Referer": "https://fate.windada.com/"}
@@ -102,16 +102,20 @@ with col_right:
             st.error("請先取得本命盤！")
 
 # --- 3. 畫面顯示區 ---
-st.markdown("---")
-st.markdown("### 🪐 本命盤與四重流轉對照")
-
-# 1. 顯示本命盤 (置中且顯眼)
 if st.session_state.birth_chart:
-    st.markdown("#### 核心：本命盤")
-    components.html(st.session_state.birth_chart, height=600, scrolling=True)
-    
     st.markdown("---")
-    st.markdown("#### 流轉分析 (流年 / 流月 / 流日 / 流時)")
+    st.markdown("### ⚡ 本地端自動生成四盤")
+    
+    # 直接輸出原始 HTML 給瀏覽器
+    for mode in ["流年", "流月", "流日", "流時"]:
+        st.markdown(f"#### {mode}盤")
+        try:
+            # 確保內容轉為字串
+            html_content = inject_transit_info(st.session_state.birth_chart, mode)
+            # 使用 components 渲染 HTML
+            components.html(html_content, height=400, scrolling=True)
+        except Exception as e:
+            st.error(f"渲染錯誤: {e}")
     
     # 2. 顯示四個流轉盤
     col1, col2 = st.columns(2)
