@@ -40,12 +40,40 @@ with col_left:
     sex = st.radio("性別", ["男", "女"], horizontal=True)
 
     if st.button("1️⃣ 取得本命盤"):
-        data = {"year": str(y), "month": str(m), "day": str(d), "hour": hours_map[h_label], "sex": "1" if sex=="男" else "0", "type": "find", "place": "1"}
-        res = st.session_state.session.post("https://fate.windada.com/cgi-bin/fate", data=data, headers=HEADERS)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        table = soup.find_all('table')[-1]
-        st.session_state.birth_chart = str(table)
-        st.rerun()
+        with st.spinner("正在進行連線握手..."):
+            try:
+                # 關鍵修正：確保 Session 先訪問首頁獲取權限
+                url = "https://fate.windada.com/cgi-bin/fate"
+                
+                # 第一步：先訪問首頁獲取必要的 Cookies 與 Session 狀態
+                st.session_state.session.get("https://fate.windada.com/", headers=HEADERS)
+                
+                # 第二步：準備表單資料
+                data = {
+                    "year": str(y), 
+                    "month": str(m), 
+                    "day": str(d), 
+                    "hour": hours_map[h_label], 
+                    "sex": "1" if sex=="男" else "0", 
+                    "type": "find", 
+                    "place": "1"
+                }
+                
+                # 第三步：送出排盤請求
+                res = st.session_state.session.post(url, data=data, headers=HEADERS)
+                
+                # 第四步：解析結果
+                soup = BeautifulSoup(res.text, 'html.parser')
+                tables = soup.find_all('table')
+                
+                if tables:
+                    # 抓取最後一個包含命盤資訊的表格
+                    st.session_state.birth_chart = str(tables[-1])
+                    st.rerun()
+                else:
+                    st.error("伺服器回應了，但未包含有效的命盤表格。")
+            except Exception as e:
+                st.error(f"連線失敗: {e}")
 
 with col_right:
     st.info("### 步驟二：設定流轉日期")
