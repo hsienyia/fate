@@ -166,6 +166,9 @@ with col_left:
 with col_right:
     st.info("### 步驟二：設定流轉日期")
     with st.container(border=True):
+        # 1. 新增：讓你選擇流轉日期是國曆還是農曆
+        t_solar_label = st.radio("流轉日期格式", ["國曆", "農曆"], index=0, horizontal=True)
+        
         tc1, tc2, tc3 = st.columns(3)
         t_year = tc1.number_input("欲查年份", min_value=1900, max_value=2100, value=2026)
         t_month = tc2.number_input("欲查月份", min_value=1, max_value=12, value=5)
@@ -174,7 +177,7 @@ with col_right:
         tc4, tc5 = st.columns(2)
         t_hour_label = tc4.selectbox("欲查時辰", list(hours_map.keys()), key="t_hour_select")
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
-        transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
+        # transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True) # 這行可以刪除，因為已經是一鍵四盤了
 
         # 第二步按鈕：連續請求四個盤
         if st.button("🚀 一鍵取得四重流轉盤", use_container_width=True):
@@ -194,7 +197,7 @@ with col_right:
                         payload = {
                             "FUNC": "Basic",
                             "Name": "",
-                            "Solar": "1",
+                            "Solar": "1", # 這是本命盤的設定 (固定國曆)
                             "Year": str(year),
                             "Month": str(month),
                             "Day": str(day),
@@ -204,7 +207,10 @@ with col_right:
                             "SubTarget": "0",
                             "Old": "0",
                             "FateYearType": "0" if transit_start == "流年本宮" else "1",
-                            "FateSolar": "0",
+                            
+                            # --- 關鍵修改：動態帶入 國曆("1") 或 農曆("0") ---
+                            "FateSolar": "1" if t_solar_label == "國曆" else "0", 
+                            
                             "FateYear": str(t_year),
                             "FateMonth": str(t_month),
                             "FateDay": str(t_day),
