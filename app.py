@@ -349,7 +349,7 @@ def calculate_single_board_score(html_content, mode):
             score -= 100
             process_log.append(f"❌ `{p_name}` 地空地劫同宮重傷 (-100分)")
         elif has_kong_hard:
-            core -= 40
+            score -= 40
             process_log.append(f"❌ `{p_name}` 逢地空星 (-40分)")
         elif has_jie_hard:
             score -= 40
