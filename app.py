@@ -4,11 +4,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import datetime
 import streamlit.components.v1 as components
-# 確保加入這些 Selenium 必要的引用
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+
 
 
 def inject_transit_info(original_html, mode, offset):
@@ -19,22 +15,7 @@ def inject_transit_info(original_html, mode, offset):
         header.string = f"--- {mode}運勢顯示中 ---"
         table.insert_before(header)
     return str(soup)
-# --- 工具函式 ---
-def get_chart_via_selenium(y, m, d, h):
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # 隱形模式
-    chrome_options.add_argument("--no-sandbox")
-    
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    driver.get("https://fate.windada.com/cgi-bin/fate")
-    
-    # 在這裡填入網站的輸入框 ID，並執行點擊
-    # 這段代碼能繞過所有 reCAPTCHA 與 Cloudflare 防護
-    # ... (執行輸入與點擊操作)
-    
-    html = driver.page_source
-    driver.quit()
-    return html
+
 
 # --- 全域設定 ---
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0", "Referer": "https://fate.windada.com/"}
