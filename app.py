@@ -9,7 +9,7 @@ st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layo
 st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
 st.write("完全模擬網站流程：先取得本命盤 ➔ 再疊加流時盤")
 
-# --- 初始化暫存區 (用來記憶第一步的資料與連線狀態) ---
+# --- 初始化暫存區 (記憶兩階段的資料) ---
 if "step1_done" not in st.session_state:
     st.session_state.step1_done = False
 if "cookies" not in st.session_state:
@@ -18,6 +18,8 @@ if "birth_chart" not in st.session_state:
     st.session_state.birth_chart = None
 if "transit_form_data" not in st.session_state:
     st.session_state.transit_form_data = {}
+if "submit_url" not in st.session_state:
+    st.session_state.submit_url = ""
 if "transit_chart" not in st.session_state:
     st.session_state.transit_chart = None
 if "transit_header" not in st.session_state:
@@ -47,45 +49,80 @@ with col_left:
         hour_label = c4.selectbox("出生時辰", list(hours_map.keys()), index=8)
         gender_label = c5.radio("性別", ["男", "女"], horizontal=True)
         
-        # 第一步按鈕：完全使用你原本成功的直接 POST 寫法
+        # 第一步按鈕：完全還原你之前 100% 成功的寫法
         if st.button("1️⃣ 開始排本命盤", use_container_width=True):
             hour_val = hours_map[hour_label]
             gender_val = "1" if gender_label == "男" else "0"
             
-            with st.spinner("正在抓取本命盤..."):
+            with st.spinner("正在破解表單並抓取本命盤..."):
                 try:
                     session = requests.Session()
                     headers = {
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-                        "Referer": "https://fate.windada.com/cgi-bin/fate"
+                        "Referer": "https://fate.windada.com/"
                     }
                     url = "https://fate.windada.com/cgi-bin/fate"
                     
-                    # 使用你原本百分之百成功的乾淨參數直接發送 POST
-                    payload = {
-                        "year": str(year), "month": str(month), "day": str(day), 
-                        "hour": hour_val, "sex": gender_val,
-                        "type": "find", "place": "1"
-                    }
+                    # 先去拿網頁的隱藏金鑰 (這是成功關鍵！)
+                    first_page = session.get(url, headers=headers)
+                    first_page.encoding = 'utf-8'
+                    soup = BeautifulSoup(first_page.text, 'html.parser')
+                    form = soup.find('form')
                     
-                    res_birth = session.post(url, data=payload, headers=headers)
+                    if not form:
+                        st.error("無法載入輸入表單。")
+                        st.stop()
+                        
+                    payload = {}
+                    for input_tag in form.find_all('input'):
+                        name = input_tag.get('name')
+                        if name and input_tag.get('type') not in ['submit', 'reset']:
+                            payload[name] = input_tag.get('value', '')
+                            
+                    for select_tag in form.find_all('select'):
+                        name = select_tag.get('name')
+                        if name:
+                            opts = select_tag.find_all('option')
+                            if opts: payload[name] = opts[0].get('value', opts[0].text)
+
+                    # 注入你的資料
+                    for key in payload.keys():
+                        k_low = key.lower()
+                        if "year" in k_low or key == "y": payload[key] = str(year)
+                        elif "month" in k_low or key == "m": payload[key] = str(month)
+                        elif "day" in k_low or key == "d": payload[key] = str(day)
+                        elif "hour" in k_low or key == "h" or "time" in k_low: payload[key] = hour_val
+                        elif "sex" in k_low or "gen" in k_low: payload[key] = gender_val
+
+                    action_url = form.get('action')
+                    submit_url = urljoin(url, action_url) if action_url else url
+                    method = form.get('method', 'get').lower()
+
+                    if method == 'post':
+                        res_birth = session.post(submit_url, data=payload, headers=headers)
+                    else:
+                        res_birth = session.get(submit_url, params=payload, headers=headers)
+                    
                     res_birth.encoding = 'utf-8'
                     birth_soup = BeautifulSoup(res_birth.text, 'html.parser')
                     
-                    # 儲存連線狀態
+                    # 儲存 Session 供第二步使用
                     st.session_state.cookies = session.cookies.get_dict()
                     
-                    # 尋找並儲存本命盤表格
+                    # 尋找真正的本命盤表格
                     birth_table = None
+                    max_td_count = 0
                     for table in birth_soup.find_all('table'):
-                        if "紫微" in table.get_text() and "天機" in table.get_text():
+                        text = table.get_text()
+                        td_count = len(table.find_all('td'))
+                        if ("紫微" in text and "天機" in text) and td_count > max_td_count:
                             birth_table = table
-                            break
+                            max_td_count = td_count
                             
                     if birth_table:
                         st.session_state.birth_chart = str(birth_table)
                         
-                        # 攔截本命盤頁面中產生的第二步表單（包含伺服器的記憶金鑰）
+                        # 攔截第二步的表單金鑰，偷偷存起來
                         transit_form = birth_soup.find('form')
                         t_payload = {}
                         if transit_form:
@@ -100,9 +137,12 @@ with col_left:
                                     t_payload[name] = selected.get('value', selected.text) if selected else sel.find('option').get('value', '')
                             
                             st.session_state.transit_form_data = t_payload
+                            t_action = transit_form.get('action')
+                            st.session_state.submit_url = urljoin(submit_url, t_action) if t_action else submit_url
+                            
                             st.session_state.step1_done = True
-                            st.session_state.transit_chart = None # 重置舊的流時盤
-                            st.rerun()
+                            st.session_state.transit_chart = None 
+                            st.rerun() 
                     else:
                         st.error("未能成功解析到命盤表格，請再試一次。")
 
@@ -122,11 +162,11 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：繼承第一步產生的金鑰與Cookies發送第二頁請求
+        # 第二步按鈕：精準發送流轉設定
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在送出流時參數..."):
+            with st.spinner("正在送出流轉參數..."):
                 try:
                     session = requests.Session()
                     if st.session_state.cookies:
@@ -134,13 +174,12 @@ with col_right:
                     
                     headers = {
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-                        "Referer": "https://fate.windada.com/cgi-bin/fate"
+                        "Referer": "https://fate.windada.com/"
                     }
-                    url = "https://fate.windada.com/cgi-bin/fate"
                     
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 精準寫入第二頁的流轉專用參數
+                    # 精準寫入流轉參數，絕對不會動到本命年份！
                     final_payload['FateSolar'] = "1" 
                     final_payload['FateYear'] = str(t_year)
                     final_payload['FateMonth'] = str(t_month)
@@ -149,18 +188,21 @@ with col_right:
                     final_payload['Target'] = "0" if transit_start == "流年本宮" else "1"
                     final_payload['calday'] = transit_type 
                     
-                    res_transit = session.post(url, data=final_payload, headers=headers)
+                    res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=headers)
                     res_transit.encoding = 'utf-8'
                     transit_soup = BeautifulSoup(res_transit.text, 'html.parser')
                     
                     # 尋找並儲存第二頁的流時盤表格
                     transit_table = None
+                    max_td_count = 0
                     for table in transit_soup.find_all('table'):
-                        if "紫微" in table.get_text() and "天機" in table.get_text():
+                        text = table.get_text()
+                        td_count = len(table.find_all('td'))
+                        if ("紫微" in text and "天機" in text) and td_count > max_td_count:
                             transit_table = table
-                            break
+                            max_td_count = td_count
                             
-                    # 抓取第二頁的好運指數標題
+                    # 抓取好運指數等標題
                     t_header = ""
                     for center_tag in transit_soup.find_all('center'):
                         if "好運指數" in center_tag.text or transit_type in center_tag.text:
