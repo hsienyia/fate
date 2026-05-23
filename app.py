@@ -363,7 +363,7 @@ def calculate_single_board_score(html_content, mode):
             is_exempt = any(f"{star}廟" in p_text or f"{star}旺" in p_text for star in ["武曲", "太陰", "太陽", "天機", "天同"])
             if is_exempt:
                 process_log.append(f"🛡️ `{p_name}` 逢忌，但廟旺豁免 (不扣分)")
-             else:
+            else:
                 pts = ji_count * 20
                 score -= pts
                 process_log.append(f"❌ `{p_name}` 逢忌煞 x{ji_count} (-{pts}分)")
