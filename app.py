@@ -6,10 +6,9 @@ import datetime
 
 # --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
-st.title("🔮 紫微命盤抓取系統 (含流年運勢)")
+st.title("🔮 紫微命盤抓取系統 (流年完整版)")
 st.write("資料來源自動抓取自 [windada算命網](https://fate.windada.com/cgi-bin/fate)")
 
-# 取得現在的年月，方便作為流年的預設值
 now = datetime.datetime.now()
 
 # --- 2. 建立網頁輸入介面 ---
@@ -35,13 +34,12 @@ with col_left:
         
         c4, c5 = st.columns(2)
         with c4:
-            # 預設選在申時 (index=8)
             hour_label = st.selectbox("出生時辰", list(hours_map.keys()), index=8)
         with c5:
             gender_label = st.radio("性別", ["男", "女"], horizontal=True)
 
 with col_right:
-    st.markdown("### 🗓️ 欲查詢的運勢時間")
+    st.markdown("### 🗓️ 欲查詢的運勢時間 (對應網站左上角)")
     with st.container(border=True):
         tc1, tc2, tc3 = st.columns(3)
         with tc1:
@@ -53,9 +51,12 @@ with col_right:
             
         tc4, tc5 = st.columns(2)
         with tc4:
-            t_hour_label = st.selectbox("欲查時辰", list(hours_map.keys()), key="t_hour_select")
+            t_hour_label = st.selectbox("欲查時辰", list(hours_map.keys()), index=0, key="t_hour_select")
         with tc5:
-            transit_type = st.radio("查詢模式", ["本命盤 (不看流年)", "流年", "流月", "流日", "流時"], index=0)
+            # 補上截圖中漏掉的「流月起始宮位」設定
+            transit_start = st.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
+
+        transit_type = st.radio("查詢模式 (按下排盤時會自動點擊該按鈕)", ["本命盤 (不看流年)", "流年", "流月", "流日", "流時"], index=4, horizontal=True)
 
 st.markdown("---")
 
@@ -65,7 +66,7 @@ if st.button("開始排盤 🚀", use_container_width=True):
     gender_val = "1" if gender_label == "男" else "0"
     t_hour_val = hours_map[t_hour_label]
 
-    with st.spinner("🤖 正在與算命伺服器進行多重驗證..."):
+    with st.spinner("🤖 正在破解伺服器雙層表單，計算星盤中..."):
         try:
             session = requests.Session()
             headers = {
@@ -74,29 +75,23 @@ if st.button("開始排盤 🚀", use_container_width=True):
             }
             url = "https://fate.windada.com/cgi-bin/fate"
             
-            # 【階段一：取得並送出本命資料】
+            # 【階段一：取得本命資料與隱藏金鑰】
             first_page = session.get(url, headers=headers)
             first_page.encoding = 'utf-8'
             soup = BeautifulSoup(first_page.text, 'html.parser')
             form = soup.find('form')
             
-            if not form:
-                st.error("無法載入輸入表單。")
-                st.stop()
-                
             payload = {}
             for input_tag in form.find_all('input'):
                 name = input_tag.get('name')
                 if name and input_tag.get('type') not in ['submit', 'reset']:
                     payload[name] = input_tag.get('value', '')
-                    
             for select_tag in form.find_all('select'):
                 name = select_tag.get('name')
                 if name:
                     opts = select_tag.find_all('option')
                     if opts: payload[name] = opts[0].get('value', opts[0].text)
 
-            # 注入使用者的出生資料
             for key in payload.keys():
                 k_low = key.lower()
                 if "year" in k_low or key == "y": payload[key] = str(year)
@@ -117,48 +112,60 @@ if st.button("開始排盤 🚀", use_container_width=True):
             res.encoding = 'utf-8'
             res_soup = BeautifulSoup(res.text, 'html.parser')
 
-            # 【階段二：如果選擇了流年/月/日/時，則攔截第二層表單再次送出】
+            # 【階段二：精準攔截第二層表單，注入流年時間並模擬點擊】
+            t_payload = {}
             if transit_type != "本命盤 (不看流年)":
-                st.toast("🔄 正在疊加流年參數，計算運勢中...", icon="⏳")
                 transit_form = res_soup.find('form')
                 
                 if transit_form:
-                    t_payload = {}
-                    # 抓取第二層表單的隱藏參數 (帶有本命盤的記憶)
                     for input_tag in transit_form.find_all('input'):
                         name = input_tag.get('name')
-                        if name and input_tag.get('type') not in ['submit', 'reset', 'button']:
-                            t_payload[name] = input_tag.get('value', '')
+                        i_type = input_tag.get('type', 'text').lower()
+                        val = input_tag.get('value', '')
+                        if not name: continue
+                        
+                        # 處理流年本宮/斗君的選項
+                        if i_type in ['radio', 'checkbox']:
+                            if ("本宮" in val and "本宮" in transit_start) or ("斗君" in val and "斗君" in transit_start):
+                                t_payload[name] = val
+                        elif i_type not in ['submit', 'reset', 'button']:
+                            t_payload[name] = val
                     
-                    # 智慧判斷哪個下拉選單是年、月、日，並注入使用者想查的時間
                     for sel in transit_form.find_all('select'):
                         name = sel.get('name')
                         if not name: continue
-                        opts = [o.get('value', o.text) for o in sel.find_all('option')]
+                        opts = sel.find_all('option')
+                        opts_vals = [o.get('value', o.text).strip() for o in opts]
                         
-                        # 如果選項裡有年份(大於1900)，就填入欲查年份
-                        if any(int(o) > 1900 for o in opts if o.isdigit()):
+                        # 聰明辨識年月日下拉選單
+                        if any(str(t_year) in v for v in opts_vals) and len(opts_vals) > 20:
                             t_payload[name] = str(t_year)
-                        # 如果選項最多到12，代表是月份
-                        elif '12' in opts and len(opts) <= 15:
+                        elif '12' in opts_vals and '1' in opts_vals and len(opts_vals) <= 13:
                             t_payload[name] = str(t_month)
-                        # 如果選項最多到31，代表是日期
-                        elif '31' in opts and len(opts) <= 35:
+                        elif '31' in opts_vals and '1' in opts_vals and len(opts_vals) <= 32:
                             t_payload[name] = str(t_day)
-                        # 如果選項包含23，代表是時辰
-                        elif '23' in opts and len(opts) <= 25:
-                            t_payload[name] = t_hour_val
+                        elif '23' in opts_vals and '0' in opts_vals and len(opts_vals) <= 25:
+                            t_payload[name] = str(t_hour_val)
                         else:
-                            # 預設值 (例如國曆/農曆選項)
                             selected = sel.find('option', selected=True)
-                            t_payload[name] = selected.get('value', selected.text) if selected else opts[0].get('value', opts[0].text)
+                            t_payload[name] = selected.get('value', selected.text) if selected else opts_vals[0]
 
-                    # 找出對應的按鈕並「點擊」它
+                    # 最關鍵的一步：找出對應的按鈕名稱並確實送出
+                    clicked = False
                     for btn in transit_form.find_all(['input', 'button']):
-                        if transit_type in btn.get('value', ''):
-                            t_payload[btn.get('name')] = btn.get('value')
+                        val = btn.get('value', '')
+                        if transit_type in val:
+                            b_name = btn.get('name')
+                            if b_name:
+                                t_payload[b_name] = val
+                            else:
+                                t_payload['submit'] = val # 防呆機制
+                            clicked = True
                             break
                             
+                    if not clicked:
+                        t_payload['submit'] = transit_type
+
                     t_action = transit_form.get('action')
                     t_submit_url = urljoin(submit_url, t_action) if t_action else submit_url
                     t_method = transit_form.get('method', 'get').lower()
@@ -171,33 +178,51 @@ if st.button("開始排盤 🚀", use_container_width=True):
                     res.encoding = 'utf-8'
                     res_soup = BeautifulSoup(res.text, 'html.parser')
 
-            # 【階段三：嚴格尋找最終盤面並美化顯示】
+            # 【階段三：抓取最終盤面、標題與好運指數】
             found_table = None
             max_td_count = 0
             
             for table in res_soup.find_all('table'):
                 text = table.get_text()
                 td_count = len(table.find_all('td'))
-                # 確認有命盤關鍵字才算數
                 if ("紫微" in text and "天機" in text) and td_count > max_td_count:
                     found_table = table
                     max_td_count = td_count
             
             if found_table:
-                if transit_type == "本命盤 (不看流年)":
-                    st.success("🎉 本命盤抓取成功！")
-                else:
-                    st.success(f"🎉 成功抓取！目標時間：{t_year}年{t_month}月{t_day}日 ({transit_type}盤)")
+                # 抓取網頁上方的「好運指數」等大標題
+                header_text = ""
+                for b_tag in res_soup.find_all(['b', 'font', 'h2', 'h3']):
+                    txt = b_tag.get_text(strip=True)
+                    if "好運指數" in txt or "本命：" in txt or "流" in txt:
+                        # 避免抓到表格內的文字
+                        if len(txt) < 30 and txt not in header_text:
+                            header_text += f"### {txt} \n"
+                
+                st.success("🎉 排盤成功！已切換至目標運勢盤。")
+                st.markdown("---")
+                
+                # 顯示標題與好運指數
+                if header_text:
+                    st.markdown(f"<div style='text-align: center; color: #1E90FF;'>{header_text}</div>", unsafe_allow_html=True)
                     
-                # 美化中間文字與格線
+                # 美化表格，同時「保留流年星星的專屬顏色」！
                 for td in found_table.find_all('td'):
                     if td.get('colspan') == '2' and td.get('rowspan') == '2':
                         td['style'] = 'background-color: #ffffff !important; color: #000000 !important; padding: 15px;'
+                        # 只把中間看不見的白色字變黑，保留其他顏色
                         for font in td.find_all('font'):
-                            if font.has_attr('color'): del font['color']
+                            if font.has_attr('color') and font['color'].lower() in ['#ffffff', 'white']:
+                                font['color'] = '#000000'
+                    else:
+                        td['style'] = td.get('style', '') + '; background-color: #fdfdfd; color: #000;'
                 
-                table_html = str(found_table).replace('<table', '<table border="1" style="width:100%; text-align:center; border-collapse: collapse; border-color: #777777; background-color: #ffffff; color: #000000;"')
+                table_html = str(found_table).replace('<table', '<table border="1" style="width:100%; text-align:center; border-collapse: collapse; border-color: #aaaaaa; background-color: #ffffff;"')
                 st.markdown(table_html, unsafe_allow_html=True)
+                
+                # 隱藏除錯面板，萬一失敗可以打開看
+                with st.expander("👉 [除錯專用] 若盤面錯誤，點此查看送出的參數"):
+                    st.write("這是程式代替你按下的表單內容：", t_payload)
             else:
                 st.warning("查無符合格式的命盤，可能是網站阻擋或日期格式異常。")
 
