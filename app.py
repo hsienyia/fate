@@ -16,6 +16,8 @@ if "cookies" not in st.session_state:
     st.session_state.cookies = None
 if "birth_chart" not in st.session_state:
     st.session_state.birth_chart = None
+if "transit_form_html" not in st.session_state:
+    st.session_state.transit_form_html = ""
 if "transit_form_data" not in st.session_state:
     st.session_state.transit_form_data = {}
 if "submit_url" not in st.session_state:
@@ -49,12 +51,12 @@ with col_left:
         hour_label = c4.selectbox("出生時辰", list(hours_map.keys()), index=8)
         gender_label = c5.radio("性別", ["男", "女"], horizontal=True)
         
-        # 第一步按鈕：完全還原你之前 100% 成功的寫法
+        # 第一步按鈕：完全還原你之前 100% 成功的寫法，先抓取空表單金鑰再送出！
         if st.button("1️⃣ 開始排本命盤", use_container_width=True):
             hour_val = hours_map[hour_label]
             gender_val = "1" if gender_label == "男" else "0"
             
-            with st.spinner("正在破解表單並抓取本命盤..."):
+            with st.spinner("正在破解表單防護並抓取本命盤..."):
                 try:
                     session = requests.Session()
                     headers = {
@@ -63,7 +65,7 @@ with col_left:
                     }
                     url = "https://fate.windada.com/cgi-bin/fate"
                     
-                    # 先去拿網頁的隱藏金鑰 (這是成功關鍵！)
+                    # 1. 先去拿網頁的隱藏金鑰 (這是成功關鍵！)
                     first_page = session.get(url, headers=headers)
                     first_page.encoding = 'utf-8'
                     soup = BeautifulSoup(first_page.text, 'html.parser')
@@ -85,8 +87,8 @@ with col_left:
                             opts = select_tag.find_all('option')
                             if opts: payload[name] = opts[0].get('value', opts[0].text)
 
-                    # 注入你的資料
-                    for key in payload.keys():
+                    # 2. 注入你的本命資料
+                    for key in list(payload.keys()):
                         k_low = key.lower()
                         if "year" in k_low or key == "y": payload[key] = str(year)
                         elif "month" in k_low or key == "m": payload[key] = str(month)
@@ -98,6 +100,7 @@ with col_left:
                     submit_url = urljoin(url, action_url) if action_url else url
                     method = form.get('method', 'get').lower()
 
+                    # 3. 發送取得本命盤
                     if method == 'post':
                         res_birth = session.post(submit_url, data=payload, headers=headers)
                     else:
@@ -106,10 +109,10 @@ with col_left:
                     res_birth.encoding = 'utf-8'
                     birth_soup = BeautifulSoup(res_birth.text, 'html.parser')
                     
-                    # 儲存 Session 供第二步使用
+                    # 儲存 Session Cookies 供第二步使用 (保持連線狀態)
                     st.session_state.cookies = session.cookies.get_dict()
                     
-                    # 尋找真正的本命盤表格
+                    # 4. 尋找真正的本命盤表格
                     birth_table = None
                     max_td_count = 0
                     for table in birth_soup.find_all('table'):
@@ -122,10 +125,11 @@ with col_left:
                     if birth_table:
                         st.session_state.birth_chart = str(birth_table)
                         
-                        # 攔截第二步的表單金鑰，偷偷存起來
+                        # 5. 攔截第二步的流轉表單金鑰，偷偷存起來
                         transit_form = birth_soup.find('form')
                         t_payload = {}
                         if transit_form:
+                            st.session_state.transit_form_html = str(transit_form) # 存下表單結構供第二步找按鈕用
                             for inp in transit_form.find_all('input'):
                                 name = inp.get('name')
                                 if name and inp.get('type') not in ['submit', 'reset', 'button']:
@@ -141,10 +145,10 @@ with col_left:
                             st.session_state.submit_url = urljoin(submit_url, t_action) if t_action else submit_url
                             
                             st.session_state.step1_done = True
-                            st.session_state.transit_chart = None 
-                            st.rerun() 
+                            st.session_state.transit_chart = None # 重置舊的流時盤
+                            st.rerun() # 自動重整網頁顯示右側
                     else:
-                        st.error("未能成功解析到命盤表格，請再試一次。")
+                        st.error("未能成功解析到命盤表格，可能是防護阻擋，請再試一次。")
 
                 except Exception as e:
                     st.error(f"第一步發生錯誤：{e}")
@@ -162,11 +166,11 @@ with col_right:
         transit_start = tc5.radio("流月起始宮位", ["流年本宮", "流年斗君"], index=0)
         transit_type = st.radio("查詢模式", ["流年", "流月", "流日", "流時"], index=3, horizontal=True)
 
-        # 第二步按鈕：精準發送流轉設定
+        # 第二步按鈕：精準發送流轉設定，且不覆蓋本命資料
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在送出流轉參數..."):
+            with st.spinner("正在計算並疊加流轉參數..."):
                 try:
                     session = requests.Session()
                     if st.session_state.cookies:
@@ -177,34 +181,51 @@ with col_right:
                         "Referer": "https://fate.windada.com/"
                     }
                     
+                    # 載入步驟一偷存的隱藏金鑰
                     final_payload = st.session_state.transit_form_data.copy()
                     
-                    # 精準寫入流轉參數，絕對不會動到本命年份！
-                    final_payload['FateSolar'] = "1" 
-                    final_payload['FateYear'] = str(t_year)
-                    final_payload['FateMonth'] = str(t_month)
-                    final_payload['FateDay'] = str(t_day)
-                    final_payload['FateHour'] = str(t_hour_val)
-                    final_payload['Target'] = "0" if transit_start == "流年本宮" else "1"
-                    final_payload['calday'] = transit_type 
+                    # 1. 精準覆寫流轉專用參數，使用防呆大小寫比對
+                    for key in list(final_payload.keys()):
+                        k_low = key.lower()
+                        if k_low == 'fatesolar': final_payload[key] = "1"  # 1為國曆
+                        elif k_low == 'fateyear': final_payload[key] = str(t_year)
+                        elif k_low == 'fatemonth': final_payload[key] = str(t_month)
+                        elif k_low == 'fateday': final_payload[key] = str(t_day)
+                        elif k_low == 'fatehour': final_payload[key] = str(t_hour_val)
+                        elif k_low == 'target': final_payload[key] = "0" if transit_start == "流年本宮" else "1"
                     
+                    # 2. 智慧尋找網頁上真正的「按鈕名稱」並點擊
+                    transit_soup = BeautifulSoup(st.session_state.transit_form_html, 'html.parser')
+                    btn_found = False
+                    for btn in transit_soup.find_all(['input', 'button']):
+                        if btn.get('type') in ['submit', 'button'] and transit_type in btn.get('value', ''):
+                            final_payload[btn.get('name')] = btn.get('value')
+                            btn_found = True
+                            break
+                            
+                    # 若動態尋找失敗的備用方案
+                    if not btn_found:
+                        btn_mapping = {"流年": "calyear", "流月": "calmonth", "流日": "calday", "流時": "caltime"}
+                        final_payload[btn_mapping.get(transit_type, 'calday')] = transit_type
+                    
+                    # 3. 發送請求
                     res_transit = session.post(st.session_state.submit_url, data=final_payload, headers=headers)
                     res_transit.encoding = 'utf-8'
-                    transit_soup = BeautifulSoup(res_transit.text, 'html.parser')
+                    transit_soup_res = BeautifulSoup(res_transit.text, 'html.parser')
                     
-                    # 尋找並儲存第二頁的流時盤表格
+                    # 4. 尋找並儲存第二頁的流時盤表格
                     transit_table = None
                     max_td_count = 0
-                    for table in transit_soup.find_all('table'):
+                    for table in transit_soup_res.find_all('table'):
                         text = table.get_text()
                         td_count = len(table.find_all('td'))
                         if ("紫微" in text and "天機" in text) and td_count > max_td_count:
                             transit_table = table
                             max_td_count = td_count
                             
-                    # 抓取好運指數等標題
+                    # 5. 抓取好運指數等標題
                     t_header = ""
-                    for center_tag in transit_soup.find_all('center'):
+                    for center_tag in transit_soup_res.find_all('center'):
                         if "好運指數" in center_tag.text or transit_type in center_tag.text:
                             for child in center_tag.children:
                                 if getattr(child, 'name', None) == 'table': break
