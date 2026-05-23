@@ -170,11 +170,32 @@ with col_right:
         if st.button("2️⃣ 疊加流轉盤", use_container_width=True, disabled=not st.session_state.step1_done):
             t_hour_val = hours_map[t_hour_label]
             
-            with st.spinner("正在計算並疊加流轉參數..."):
+            with st.spinner("正在計算..."):
                 try:
+                    # --- DEBUG 模式：印出目前的表單結構 ---
+                    st.write("--- 偵錯：目前的 Payload ---")
+                    
+                    # 複製一份原本的數據
+                    final_payload = st.session_state.transit_form_data.copy()
+                    
+                    # 注入時間參數
+                    final_payload['FateYear'] = str(t_year)
+                    final_payload['FateMonth'] = str(t_month)
+                    final_payload['FateDay'] = str(t_day)
+                    final_payload['FateHour'] = t_hour_val
+                    
+                    # 關鍵點：找出網站判定流時的那個按鈕的值 (例如 'caltime')
+                    # 這裡我們強行印出來看看它到底是什麼
+                    st.write(final_payload) 
+                    
+                    # 執行請求 (保持不變)
                     session = requests.Session()
-                    if st.session_state.cookies:
-                        session.cookies.update(st.session_state.cookies)
+                    if st.session_state.cookies: session.cookies.update(st.session_state.cookies)
+                    
+                    # ... (發送請求後) ...
+                    
+                    # --- DEBUG 模式：檢查伺服器回傳的真實 URL ---
+                    st.write(f"送出網址: {st.session_state.submit_url}")
                     
                     headers = {
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
