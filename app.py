@@ -6,7 +6,7 @@ import datetime
 
 # --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
-st.title("🔮 紫微命盤抓取系統 (含流年運勢)")
+st.title("🔮 紫微雙盤對照系統 (原色版)")
 st.write("資料來源自動抓取自 [windada算命網](https://fate.windada.com/cgi-bin/fate)")
 
 # 取得現在的年月，方便作為流年的預設值
@@ -55,7 +55,8 @@ with col_right:
         with tc4:
             t_hour_label = st.selectbox("欲查時辰", list(hours_map.keys()), key="t_hour_select")
         with tc5:
-            transit_type = st.radio("查詢模式", ["本命盤 (不看流年)", "流年", "流月", "流日", "流時"], index=0)
+            # 預設改為流時，方便直接看結果
+            transit_type = st.radio("查詢模式", ["本命盤 (不看流年)", "流年", "流月", "流日", "流時"], index=4)
 
 st.markdown("---")
 
@@ -65,7 +66,7 @@ if st.button("開始排盤 🚀", use_container_width=True):
     gender_val = "1" if gender_label == "男" else "0"
     t_hour_val = hours_map[t_hour_label]
 
-    with st.spinner("🤖 正在與算命伺服器進行多重驗證..."):
+    with st.spinner("🤖 正在自動執行雙頁面查詢..."):
         try:
             session = requests.Session()
             headers = {
@@ -110,17 +111,29 @@ if st.button("開始排盤 🚀", use_container_width=True):
             method = form.get('method', 'get').lower()
 
             if method == 'post':
-                res = session.post(submit_url, data=payload, headers=headers)
+                res_birth = session.post(submit_url, data=payload, headers=headers)
             else:
-                res = session.get(submit_url, params=payload, headers=headers)
+                res_birth = session.get(submit_url, params=payload, headers=headers)
             
-            res.encoding = 'utf-8'
-            res_soup = BeautifulSoup(res.text, 'html.parser')
+            res_birth.encoding = 'utf-8'
+            birth_soup = BeautifulSoup(res_birth.text, 'html.parser')
+            
+            # 🔥 尋找並單獨儲存「本命盤」表格
+            birth_table = None
+            max_td_count = 0
+            for table in birth_soup.find_all('table'):
+                text = table.get_text()
+                td_count = len(table.find_all('td'))
+                if ("紫微" in text and "天機" in text) and td_count > max_td_count:
+                    birth_table = table
+                    max_td_count = td_count
+
+            transit_table = None
 
             # 【階段二：如果選擇了流年/月/日/時，則攔截第二層表單再次送出】
             if transit_type != "本命盤 (不看流年)":
-                st.toast("🔄 正在疊加流年參數，計算運勢中...", icon="⏳")
-                transit_form = res_soup.find('form')
+                st.toast("🔄 已取得本命盤，正在計算流轉運勢...", icon="⏳")
+                transit_form = birth_soup.find('form')
                 
                 if transit_form:
                     t_payload = {}
@@ -136,20 +149,15 @@ if st.button("開始排盤 🚀", use_container_width=True):
                         if not name: continue
                         opts = [o.get('value', o.text) for o in sel.find_all('option')]
                         
-                        # 如果選項裡有年份(大於1900)，就填入欲查年份
                         if any(int(o) > 1900 for o in opts if o.isdigit()):
                             t_payload[name] = str(t_year)
-                        # 如果選項最多到12，代表是月份
                         elif '12' in opts and len(opts) <= 15:
                             t_payload[name] = str(t_month)
-                        # 如果選項最多到31，代表是日期
                         elif '31' in opts and len(opts) <= 35:
                             t_payload[name] = str(t_day)
-                        # 如果選項包含23，代表是時辰
                         elif '23' in opts and len(opts) <= 25:
                             t_payload[name] = t_hour_val
                         else:
-                            # 預設值 (例如國曆/農曆選項)
                             selected = sel.find('option', selected=True)
                             t_payload[name] = selected.get('value', selected.text) if selected else opts[0].get('value', opts[0].text)
 
@@ -164,42 +172,45 @@ if st.button("開始排盤 🚀", use_container_width=True):
                     t_method = transit_form.get('method', 'get').lower()
 
                     if t_method == 'post':
-                        res = session.post(t_submit_url, data=t_payload, headers=headers)
+                        res_transit = session.post(t_submit_url, data=t_payload, headers=headers)
                     else:
-                        res = session.get(t_submit_url, params=t_payload, headers=headers)
+                        res_transit = session.get(t_submit_url, params=t_payload, headers=headers)
                         
-                    res.encoding = 'utf-8'
-                    res_soup = BeautifulSoup(res.text, 'html.parser')
+                    res_transit.encoding = 'utf-8'
+                    transit_soup = BeautifulSoup(res_transit.text, 'html.parser')
 
-            # 【階段三：嚴格尋找最終盤面並美化顯示】
-            found_table = None
-            max_td_count = 0
-            
-            for table in res_soup.find_all('table'):
-                text = table.get_text()
-                td_count = len(table.find_all('td'))
-                # 確認有命盤關鍵字才算數
-                if ("紫微" in text and "天機" in text) and td_count > max_td_count:
-                    found_table = table
-                    max_td_count = td_count
-            
-            if found_table:
-                if transit_type == "本命盤 (不看流年)":
-                    st.success("🎉 本命盤抓取成功！")
-                else:
-                    st.success(f"🎉 成功抓取！目標時間：{t_year}年{t_month}月{t_day}日 ({transit_type}盤)")
-                    
-                # 美化中間文字與格線
-                for td in found_table.find_all('td'):
-                    if td.get('colspan') == '2' and td.get('rowspan') == '2':
-                        td['style'] = 'background-color: #ffffff !important; color: #000000 !important; padding: 15px;'
-                        for font in td.find_all('font'):
-                            if font.has_attr('color'): del font['color']
+                    # 🔥 尋找並單獨儲存最終的「流時盤」表格
+                    max_td_count = 0
+                    for table in transit_soup.find_all('table'):
+                        text = table.get_text()
+                        td_count = len(table.find_all('td'))
+                        if ("紫微" in text and "天機" in text) and td_count > max_td_count:
+                            transit_table = table
+                            max_td_count = td_count
+
+            # 【階段三：將本命盤與流時盤左右並列顯示】
+            if birth_table:
+                st.success("🎉 雙層排盤成功！")
                 
-                table_html = str(found_table).replace('<table', '<table border="1" style="width:100%; text-align:center; border-collapse: collapse; border-color: #777777; background-color: #ffffff; color: #000000;"')
-                st.markdown(table_html, unsafe_allow_html=True)
+                # 建立左右兩欄
+                out_left, out_right = st.columns(2)
+                
+                with out_left:
+                    st.markdown("<h3 style='text-align: center;'>🪐 本命盤</h3>", unsafe_allow_html=True)
+                    # 絕對不改顏色，直接輸出
+                    st.markdown(str(birth_table), unsafe_allow_html=True)
+                    
+                with out_right:
+                    st.markdown(f"<h3 style='text-align: center;'>⚡ {transit_type}盤</h3>", unsafe_allow_html=True)
+                    if transit_table:
+                        # 絕對不改顏色，直接輸出
+                        st.markdown(str(transit_table), unsafe_allow_html=True)
+                    elif transit_type != "本命盤 (不看流年)":
+                        st.warning("查無流時盤，可能網站阻擋或參數設定異常。")
+                    else:
+                        st.info("您選擇不看流年，故此處無顯示。")
             else:
-                st.warning("查無符合格式的命盤，可能是網站阻擋或日期格式異常。")
+                st.warning("查無符合格式的命盤，請確認日期格式異常。")
 
         except Exception as e:
             st.error(f"發生錯誤：{e}")
