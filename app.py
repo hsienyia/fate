@@ -13,7 +13,7 @@ HEADERS = {
 }
 
 # --- 1. 網頁基本設定 & CSS 強制不換行 ---
-st.set_page_config(page_title="財運機運", page_icon="🔮", layout="wide")
+st.set_page_config(page_title="財運與機運", page_icon="🔮", layout="wide")
 
 # 透過 CSS 強制讓 st.metric 並排不換行，並稍微縮小數字字體以適應寬度
 st.markdown(
@@ -33,7 +33,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("🔮 財運機運")
+st.title("🔮 財運與機運")
 st.write("先輸入生辰 ➔ 再查詢今日運勢")
 
 # --- 初始化暫存區 (記憶兩階段的資料) ---
@@ -738,7 +738,7 @@ if st.session_state.birth_chart:
                     st.caption(log)
     
     # 隱藏網站抓取到的本命盤，收合於擴展區塊內
-    with st.expander("🗺️ 點此展開查看原始本命盤表格"):
+    #with st.expander("🗺️ 點此展開查看原始本命盤表格"):
         components.html(st.session_state.birth_chart, height=550, scrolling=True)
 else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
@@ -907,7 +907,7 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
 # 顯示四個流轉盤
 if hasattr(st.session_state, 'transit_charts') and st.session_state.transit_charts:
     st.markdown("---")
-    with st.expander("🗺️ 點此展開查看流年/流月/流日/流時真實命盤表格"):
+    #with st.expander("🗺️ 點此展開查看流年/流月/流日/流時真實命盤表格"):
         col1, col2 = st.columns(2)
         col3, col4 = st.columns(2)
         
