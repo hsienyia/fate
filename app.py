@@ -519,7 +519,7 @@ def get_total_opportunity_index(charts_dict):
         sub_scores_dict[mode] = sub_s
         logs[mode] = l
     
-    total = (scores["流年盤"] * 0.15) + (scores["流月盤"] * 0.15) + (scores["流日盤"] * 0.3) + (scores["流時盤"] * 0.4)
+    total = (scores["流年盤"] * 0.1) + (scores["流月盤"] * 0.1) + (scores["流日盤"] * 0.4) + (scores["流時盤"] * 0.4)
     return round(total, 1), scores, sub_scores_dict, logs
 
 
@@ -538,7 +538,7 @@ st.markdown("---")
 if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_charts) == 4:
     total_luck, individual_scores, process_logs = get_total_luck_index(st.session_state.transit_charts)
     
-    st.markdown("### 📊 快樂體操核心：當下好運指數與解析 (市場風控)")
+    st.markdown("### 📊 快樂體操：財運 ")
     
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
@@ -585,7 +585,7 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
     opp_total, opp_scores, opp_subs, opp_logs = get_total_opportunity_index(st.session_state.transit_charts)
     
     st.markdown("---")
-    st.markdown("### 🕊️ 快樂體操核心：出門機運與社交雷達")
+    st.markdown("### 🕊️ 快樂體操：機運 ")
     
     c_o1, c_o2, c_o3 = st.columns([1, 2, 1])
     with c_o2:
