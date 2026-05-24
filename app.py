@@ -922,9 +922,9 @@ if hasattr(st.session_state, 'transit_charts') and st.session_state.transit_char
             with col:
                 st.markdown(f"<h4 style='text-align: center;'>{title}</h4>", unsafe_allow_html=True)
                 if title in st.session_state.transit_charts:
-                    #components.html(st.session_state.transit_charts[title], height=500, scrolling=True)
+                    components.html(st.session_state.transit_charts[title], height=500, scrolling=True)
                 else:
-                    #st.warning(f"無法取得{title}資料")
+                    st.warning(f"無法取得{title}資料")
                     
 elif st.session_state.step1_done:
     st.info("本命盤已就緒！請設定上方流轉日期後，點擊「🚀 一鍵取得四重流轉盤」。")
