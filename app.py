@@ -608,9 +608,17 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
         else:
             st.warning("🏠 能量偏向內收。外在阻礙較多，適合在家沉澱、閱讀充電。")
 
+    # === 新增：機運指數各維度獨立評分 ===
+    st.markdown("#### 🎯 機運各維度獨立評分 (著重短線動能)")
+    osc1, osc2, osc3, osc4 = st.columns(4)
+    osc1.metric("流年盤 (佔 10%)", f"{opp_scores['流年盤']} 分", f"貢獻: {round(opp_scores['流年盤']*0.10, 1)}分", delta_color="off")
+    osc2.metric("流月盤 (佔 10%)", f"{opp_scores['流月盤']} 分", f"貢獻: {round(opp_scores['流月盤']*0.10, 1)}分", delta_color="off")
+    osc3.metric("流日盤 (佔 40%)", f"{opp_scores['流日盤']} 分", f"貢獻: {round(opp_scores['流日盤']*0.40, 1)}分", delta_color="off")
+    osc4.metric("流時盤 (佔 40%)", f"{opp_scores['流時盤']} 分", f"貢獻: {round(opp_scores['流時盤']*0.40, 1)}分", delta_color="off")
+
     with st.expander("📝 點此展開查看【機運指數】三大項目詳細算分明細"):
         for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
-            st.markdown(f"#### 🧭 【{mode}】結算總分: {opp_scores[mode]} 分 (基準分: 50)")
+            st.markdown(f"#### 🧭 【{mode}】結算總分: {opp_scores[mode]} 分 (基準分: 30)")
             
             col_p, col_s, col_n = st.columns(3)
             
