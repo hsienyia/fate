@@ -13,7 +13,7 @@ HEADERS = {
 }
 
 # --- 1. 網頁基本設定 & CSS 強制不換行 ---
-st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
+st.set_page_config(page_title="財運機運", page_icon="🔮", layout="wide")
 
 # 透過 CSS 強制讓 st.metric 並排不換行，並稍微縮小數字字體以適應寬度
 st.markdown(
@@ -33,8 +33,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
-st.write("完全模擬網站流程：先取得本命盤 ➔ 再疊加流時盤")
+st.title("🔮 財運機運")
+st.write("先輸入生辰 ➔ 再查詢今日運勢")
 
 # --- 初始化暫存區 (記憶兩階段的資料) ---
 if "step1_done" not in st.session_state:
