@@ -12,8 +12,27 @@ HEADERS = {
     "Referer": "https://fate.windada.com/"
 }
 
-# --- 1. 網頁基本設定 ---
+# --- 1. 網頁基本設定 & CSS 強制不換行 ---
 st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
+
+# 透過 CSS 強制讓 st.metric 並排不換行，並稍微縮小數字字體以適應寬度
+st.markdown(
+    """
+    <style>
+    div[data-testid="metric-container"] {
+        white-space: nowrap !important;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 1.6rem !important;
+    }
+    div[data-testid="stMetricDelta"] {
+        font-size: 0.9rem !important;
+    }
+    </style>
+    """, 
+    unsafe_allow_html=True
+)
+
 st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
 st.write("完全模擬網站流程：先取得本命盤 ➔ 再疊加流時盤")
 
@@ -774,28 +793,39 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
     # === 新增：機運指數各維度獨立評分 ===
     st.markdown("#### 🎯 機運各維度獨立評分 (著重短線動能)")
     
-    # 使用 HTML Flexbox 強制四個分數並排
+    # 計算各盤的「主打項目」
+    main_features = {}
+    for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
+        subs = opp_subs[mode]
+        best_cat = max(subs, key=subs.get)
+        best_val = subs[best_cat]
+        if best_val > 0:
+            main_features[mode] = f"✨ 主打：{best_cat} (+{best_val})"
+        else:
+            main_features[mode] = "🏠 能量內收"
+    
+    # 使用 HTML Flexbox 強制四個分數並排，並帶入主打項目取代貢獻分
     opp_metrics_html = f"""
     <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; text-align: left; background: rgba(128,128,128,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px; overflow-x: auto;">
         <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-right: 5px;">
             <div style="font-size: 0.8rem; color: gray;">流年(10%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流年盤']}</div>
-            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流年盤']*0.10, 1)}</div>
+            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流年盤']}</div>
         </div>
         <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
             <div style="font-size: 0.8rem; color: gray;">流月(10%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流月盤']}</div>
-            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流月盤']*0.10, 1)}</div>
+            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流月盤']}</div>
         </div>
         <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
             <div style="font-size: 0.8rem; color: gray;">流日(40%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流日盤']}</div>
-            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流日盤']*0.40, 1)}</div>
+            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流日盤']}</div>
         </div>
         <div style="flex: 1; min-width: 70px; padding-left: 10px;">
             <div style="font-size: 0.8rem; color: gray;">流時(40%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流時盤']}</div>
-            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流時盤']*0.40, 1)}</div>
+            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流時盤']}</div>
         </div>
     </div>
     """
