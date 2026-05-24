@@ -800,7 +800,7 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
         best_cat = max(subs, key=subs.get)
         best_val = subs[best_cat]
         if best_val > 0:
-            main_features[mode] = f"✨ 主打：{best_cat} (+{best_val})"
+            main_features[mode] = f" 主打：{best_cat} (+{best_val})"
         else:
             main_features[mode] = "🏠 能量內收"
     
