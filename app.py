@@ -260,20 +260,20 @@ def calculate_single_board_score(html_content, mode):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
+    # --- 最強雙重防護定位命宮 ---
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
         cell_html = str(cells[idx]).replace(" ", "").upper()
         if "BACKGROUND-COLOR:#FFCC66" in cell_html or "BACKGROUND-COLOR:YELLOW" in cell_html:
-            ming_pos = i
-            break
+            ming_pos = i; break
             
     if ming_pos == -1: 
         for i, idx in enumerate(clockwise_indices):
-            if "【命宮】" in cell_texts[idx]:
-                ming_pos = i
-                break
+            if "命宮" in cell_texts[idx] or "命、身" in cell_texts[idx]:
+                ming_pos = i; break
                 
     if ming_pos == -1: return 50, ["找不到命宮，給予基準分: 50分"]
+    # ---------------------------
 
     ming = cell_texts[clockwise_indices[ming_pos]]
     fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
@@ -400,6 +400,7 @@ def calculate_opportunity_score(html_content, mode):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
+    # --- 最強雙重防護定位命宮 ---
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
         cell_html = str(cells[idx]).replace(" ", "").upper()
@@ -412,6 +413,7 @@ def calculate_opportunity_score(html_content, mode):
                 ming_pos = i; break
                 
     if ming_pos == -1: return base_score, sub_scores, process_logs
+    # ---------------------------
 
     ming  = cell_texts[clockwise_indices[ming_pos]]
     fumu  = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]  
@@ -563,12 +565,20 @@ def calculate_birth_wealth(html_content):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
+    # --- 最強雙重防護定位命宮 ---
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
-        if "命宮" in cell_texts[idx] or "命、身" in cell_texts[idx]:
+        cell_html = str(cells[idx]).replace(" ", "").upper()
+        if "BACKGROUND-COLOR:#FFCC66" in cell_html or "BACKGROUND-COLOR:YELLOW" in cell_html:
             ming_pos = i; break
             
+    if ming_pos == -1: 
+        for i, idx in enumerate(clockwise_indices):
+            if "命宮" in cell_texts[idx] or "命、身" in cell_texts[idx]:
+                ming_pos = i; break
+                
     if ming_pos == -1: return 50, ["找不到命宮"]
+    # ---------------------------
 
     ming = cell_texts[clockwise_indices[ming_pos]]
     fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
@@ -631,12 +641,20 @@ def calculate_birth_opportunity(html_content):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
+    # --- 最強雙重防護定位命宮 ---
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
-        if "【命宮】" in cell_texts[idx]:
+        cell_html = str(cells[idx]).replace(" ", "").upper()
+        if "BACKGROUND-COLOR:#FFCC66" in cell_html or "BACKGROUND-COLOR:YELLOW" in cell_html:
             ming_pos = i; break
             
+    if ming_pos == -1: 
+        for i, idx in enumerate(clockwise_indices):
+            if "命宮" in cell_texts[idx] or "命、身" in cell_texts[idx]:
+                ming_pos = i; break
+                
     if ming_pos == -1: return base_score, sub_scores, process_logs
+    # ---------------------------
 
     ming = cell_texts[clockwise_indices[ming_pos]]; fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
     guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]; jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
