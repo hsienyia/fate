@@ -810,22 +810,22 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
         <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-right: 5px;">
             <div style="font-size: 0.8rem; color: gray;">流年(10%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流年盤']}</div>
-            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流年盤']}</div>
+            <div style="font-size: 0.75rem; color: gray; font-weight: 500;">{main_features['流年盤']}</div>
         </div>
         <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
             <div style="font-size: 0.8rem; color: gray;">流月(10%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流月盤']}</div>
-            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流月盤']}</div>
+            <div style="font-size: 0.75rem; color: gray; font-weight: 500;">{main_features['流月盤']}</div>
         </div>
         <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
             <div style="font-size: 0.8rem; color: gray;">流日(40%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流日盤']}</div>
-            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流日盤']}</div>
+            <div style="font-size: 0.75rem; color: gray; font-weight: 500;">{main_features['流日盤']}</div>
         </div>
         <div style="flex: 1; min-width: 70px; padding-left: 10px;">
             <div style="font-size: 0.8rem; color: gray;">流時(40%)</div>
             <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流時盤']}</div>
-            <div style="font-size: 0.75rem; color: #8A2BE2; font-weight: 500;">{main_features['流時盤']}</div>
+            <div style="font-size: 0.75rem; color: gray; font-weight: 500;">{main_features['流時盤']}</div>
         </div>
     </div>
     """
