@@ -366,10 +366,11 @@ def get_total_luck_index(charts_dict):
 # 引擎區塊 2：全新機運指數 (三大模組整合)
 # ==========================================
 def calculate_opportunity_score(html_content, mode):
-    base_score = 50 
+    base_score = 30 
     
     sub_scores = {"格局": 0, "社交": 0, "貴人": 0}
     process_logs = {"格局": [], "社交": [], "貴人": []}
+    process_logs["格局"].append("**✨ 機運起算分: 30 分 (嚴格校準版)**") # 加上這行讓日誌更清楚
     
     if not html_content: return base_score, sub_scores, process_logs
     
