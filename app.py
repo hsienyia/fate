@@ -408,7 +408,7 @@ def calculate_opportunity_score(html_content, mode):
             
     if ming_pos == -1: 
         for i, idx in enumerate(clockwise_indices):
-            if "【命宮】" in cell_texts[idx]:
+            if "命宮" in cell_texts[idx] or "命、身" in cell_texts[idx]:
                 ming_pos = i; break
                 
     if ming_pos == -1: return base_score, sub_scores, process_logs
