@@ -790,8 +790,8 @@ if st.session_state.birth_chart:
                     st.caption(log)
     
      #隱藏網站抓取到的本命盤，收合於擴展區塊內
-    with st.expander("🗺️ 點此展開查看原始本命盤表格"):
-        components.html(st.session_state.birth_chart, height=550, scrolling=True)
+    #with st.expander("🗺️ 點此展開查看原始本命盤表格"):
+        #components.html(st.session_state.birth_chart, height=550, scrolling=True)
 else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
