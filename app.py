@@ -716,21 +716,21 @@ def calculate_birth_opportunity(html_content):
 # 3. 畫面顯示區 (儀表板渲染)
 # ==========================================
 st.markdown("---")
-st.markdown("### 🪐 核心：本命盤與基礎體質 (初始能力值)")
+st.markdown("### 🪐 基礎體質 (初始能力值)")
 
 if st.session_state.birth_chart:
-    st.markdown("#### 🧬 本命基礎底蘊")
+    st.markdown("#### 🧬 基礎底蘊")
     b_wealth_score, b_wealth_logs = calculate_birth_wealth(st.session_state.birth_chart)
     b_opp_score, b_opp_subs, b_opp_logs = calculate_birth_opportunity(st.session_state.birth_chart)
     
     b_col1, b_col2 = st.columns(2)
     with b_col1:
-        st.metric("💰 本命財運基礎分", f"{b_wealth_score} 分")
+        st.metric("💰 財運基礎分", f"{b_wealth_score} 分")
         with st.expander("📝 展開查看本命財運算分明細"):
             for log in b_wealth_logs:
                 st.caption(log)
     with b_col2:
-        st.metric("🕊️ 本命社交機運基礎分", f"{b_opp_score} 分")
+        st.metric("🕊️ 社交機運基礎分", f"{b_opp_score} 分")
         with st.expander("📝 展開查看本命機運算分明細"):
             st.write(f"**格局:** `{b_opp_subs['格局']:+d}` | **社交:** `{b_opp_subs['社交']:+d}` | **貴人:** `{b_opp_subs['貴人']:+d}`")
             for cat in ["格局", "社交", "貴人"]:
@@ -841,7 +841,7 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
             st.warning("🏠 能量偏向內收。外在阻礙較多，適合在家沉澱、閱讀充電。")
 
     # === 新增：機運指數各維度獨立評分 ===
-    st.markdown("#### 🎯 機運各維度獨立評分 (著重短線動能)")
+    st.markdown("#### 🎯 機運各維度獨立評分")
     
     # 計算各盤的「主打項目」
     main_features = {}
