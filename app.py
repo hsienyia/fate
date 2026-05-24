@@ -12,8 +12,27 @@ HEADERS = {
     "Referer": "https://fate.windada.com/"
 }
 
-# --- 1. 網頁基本設定 ---
+# --- 1. 網頁基本設定 & CSS 強制不換行 ---
 st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
+
+# 透過 CSS 強制讓 st.metric 並排不換行，並稍微縮小數字字體以適應寬度
+st.markdown(
+    """
+    <style>
+    div[data-testid="metric-container"] {
+        white-space: nowrap !important;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 1.6rem !important;
+    }
+    div[data-testid="stMetricDelta"] {
+        font-size: 0.9rem !important;
+    }
+    </style>
+    """, 
+    unsafe_allow_html=True
+)
+
 st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
 st.write("完全模擬網站流程：先取得本命盤 ➔ 再疊加流時盤")
 
@@ -69,13 +88,9 @@ with col_left:
             with st.spinner("正在破解表單防護並抓取本命盤..."):
                 try:
                     session = requests.Session()
-                    headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-                        "Referer": "https://fate.windada.com/"
-                    }
                     url = "https://fate.windada.com/cgi-bin/fate"
                     
-                    first_page = session.get(url, headers=headers)
+                    first_page = session.get(url, headers=HEADERS)
                     first_page.encoding = 'utf-8'
                     soup = BeautifulSoup(first_page.text, 'html.parser')
                     form = soup.find('form')
@@ -109,9 +124,9 @@ with col_left:
                     method = form.get('method', 'get').lower()
 
                     if method == 'post':
-                        res_birth = session.post(submit_url, data=payload, headers=headers)
+                        res_birth = session.post(submit_url, data=payload, headers=HEADERS)
                     else:
-                        res_birth = session.get(submit_url, params=payload, headers=headers)
+                        res_birth = session.get(submit_url, params=payload, headers=HEADERS)
                     
                     res_birth.encoding = 'utf-8'
                     birth_soup = BeautifulSoup(res_birth.text, 'html.parser')
@@ -370,7 +385,7 @@ def calculate_opportunity_score(html_content, mode):
     
     sub_scores = {"格局": 0, "社交": 0, "貴人": 0}
     process_logs = {"格局": [], "社交": [], "貴人": []}
-    process_logs["格局"].append("**✨ 機運起算分: 30 分 (嚴格校準版)**") # 加上這行讓日誌更清楚
+    process_logs["格局"].append("**✨ 機運起算分: 30 分 (嚴格校準版)**") 
     
     if not html_content: return base_score, sub_scores, process_logs
     
@@ -654,34 +669,27 @@ st.markdown("---")
 st.markdown("### 🪐 核心：本命盤與基礎體質 (初始能力值)")
 
 if st.session_state.birth_chart:
-    # 建立比例為 2:1 的左右欄位
-    b_col1, b_col2 = st.columns([2, 1])
+    st.markdown("#### 🧬 本命基礎底蘊")
+    b_wealth_score, b_wealth_logs = calculate_birth_wealth(st.session_state.birth_chart)
+    b_opp_score, b_opp_subs, b_opp_logs = calculate_birth_opportunity(st.session_state.birth_chart)
     
+    b_col1, b_col2 = st.columns(2)
     with b_col1:
-        # 左側：顯示原始命盤
-        components.html(st.session_state.birth_chart, height=550, scrolling=True)
-        
-    with b_col2:
-        # 右側：計算並顯示本命基礎體質
-        st.markdown("#### 🧬 本命基礎底蘊")
-        b_wealth_score, b_wealth_logs = calculate_birth_wealth(st.session_state.birth_chart)
-        b_opp_score, b_opp_subs, b_opp_logs = calculate_birth_opportunity(st.session_state.birth_chart)
-        
-        # 財運底蘊
         st.metric("💰 本命財運基礎分", f"{b_wealth_score} 分")
         with st.expander("📝 展開查看本命財運算分明細"):
             for log in b_wealth_logs:
                 st.caption(log)
-                
-        st.markdown("---")
-        
-        # 機運底蘊
+    with b_col2:
         st.metric("🕊️ 本命社交機運基礎分", f"{b_opp_score} 分")
         with st.expander("📝 展開查看本命機運算分明細"):
             st.write(f"**格局:** `{b_opp_subs['格局']:+d}` | **社交:** `{b_opp_subs['社交']:+d}` | **貴人:** `{b_opp_subs['貴人']:+d}`")
             for cat in ["格局", "社交", "貴人"]:
                 for log in b_opp_logs[cat]:
                     st.caption(log)
+    
+    # 隱藏網站抓取到的本命盤，收合於擴展區塊內
+    with st.expander("🗺️ 點此展開查看原始本命盤表格"):
+        components.html(st.session_state.birth_chart, height=550, scrolling=True)
 else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
@@ -715,10 +723,11 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
 
     st.markdown("#### 🎯 各維度獨立評分")
     sc1, sc2, sc3, sc4 = st.columns(4)
-    sc1.metric("流年盤 (佔 15%)", f"{individual_scores['流年盤']} 分", f"貢獻: {round(individual_scores['流年盤']*0.15, 1)}分", delta_color="off")
-    sc2.metric("流月盤 (佔 15%)", f"{individual_scores['流月盤']} 分", f"貢獻: {round(individual_scores['流月盤']*0.15, 1)}分", delta_color="off")
-    sc3.metric("流日盤 (佔 30%)", f"{individual_scores['流日盤']} 分", f"貢獻: {round(individual_scores['流日盤']*0.30, 1)}分", delta_color="off")
-    sc4.metric("流時盤 (佔 40%)", f"{individual_scores['流時盤']} 分", f"貢獻: {round(individual_scores['流時盤']*0.40, 1)}分", delta_color="off")
+    # 文字精簡化，搭配頂部 CSS 確保不換行
+    sc1.metric("流年 (15%)", f"{individual_scores['流年盤']}", f"貢獻: {round(individual_scores['流年盤']*0.15, 1)}", delta_color="off")
+    sc2.metric("流月 (15%)", f"{individual_scores['流月盤']}", f"貢獻: {round(individual_scores['流月盤']*0.15, 1)}", delta_color="off")
+    sc3.metric("流日 (30%)", f"{individual_scores['流日盤']}", f"貢獻: {round(individual_scores['流日盤']*0.30, 1)}", delta_color="off")
+    sc4.metric("流時 (40%)", f"{individual_scores['流時盤']}", f"貢獻: {round(individual_scores['流時盤']*0.40, 1)}", delta_color="off")
 
     with st.expander("📝 點此展開查看各盤詳細計算過程 (好運指數)"):
         log_c1, log_c2 = st.columns(2)
@@ -763,10 +772,11 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
     # === 新增：機運指數各維度獨立評分 ===
     st.markdown("#### 🎯 機運各維度獨立評分 (著重短線動能)")
     osc1, osc2, osc3, osc4 = st.columns(4)
-    osc1.metric("流年盤 (佔 10%)", f"{opp_scores['流年盤']} 分", f"貢獻: {round(opp_scores['流年盤']*0.10, 1)}分", delta_color="off")
-    osc2.metric("流月盤 (佔 10%)", f"{opp_scores['流月盤']} 分", f"貢獻: {round(opp_scores['流月盤']*0.10, 1)}分", delta_color="off")
-    osc3.metric("流日盤 (佔 40%)", f"{opp_scores['流日盤']} 分", f"貢獻: {round(opp_scores['流日盤']*0.40, 1)}分", delta_color="off")
-    osc4.metric("流時盤 (佔 40%)", f"{opp_scores['流時盤']} 分", f"貢獻: {round(opp_scores['流時盤']*0.40, 1)}分", delta_color="off")
+    # 文字精簡化，搭配頂部 CSS 確保不換行
+    osc1.metric("流年 (10%)", f"{opp_scores['流年盤']}", f"貢獻: {round(opp_scores['流年盤']*0.10, 1)}", delta_color="off")
+    osc2.metric("流月 (10%)", f"{opp_scores['流月盤']}", f"貢獻: {round(opp_scores['流月盤']*0.10, 1)}", delta_color="off")
+    osc3.metric("流日 (40%)", f"{opp_scores['流日盤']}", f"貢獻: {round(opp_scores['流日盤']*0.40, 1)}", delta_color="off")
+    osc4.metric("流時 (40%)", f"{opp_scores['流時盤']}", f"貢獻: {round(opp_scores['流時盤']*0.40, 1)}", delta_color="off")
 
     with st.expander("📝 點此展開查看【機運指數】三大項目詳細算分明細"):
         for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
