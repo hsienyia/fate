@@ -744,6 +744,17 @@ def calculate_birth_opportunity(html_content):
             else:
                 sub_scores["格局"] += 2
                 process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+2分)")
+
+    # 🛡️ 社交魅力防護網 (針對格局層面的干擾源進行扣分)
+    breaker_stars = {"擎羊": 15, "陀羅": 15, "火星": 10, "鈴星": 10, "地空": 20, "地劫": 20}
+    for star, pts in breaker_stars.items():
+        if star in sf_text:
+            sub_scores["格局"] -= pts
+            process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
+            
+    if "巨門" in sf_text and "忌" in sf_text:
+        sub_scores["格局"] -= 20
+        process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
     # ----------------------------------------
 
     # 模組 2：社交
