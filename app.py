@@ -425,36 +425,57 @@ def calculate_opportunity_score(html_content, mode):
     
     sf_text = ming + cai + guan + qian 
     social_text = ming + fumu + guan + jiao + qian 
-    
-    # 模組 1：格局
+
+    # 模組 1：格局與魅力榜
+    # 🏆 終極人見人愛排行榜 (最高分群)
     if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]):
         sub_scores["格局"] += 25
         process_logs["格局"].append("✨ 三方觸發「機月同梁」，團隊協作效率大增 (+25分)")
         
+    if "天同" in sf_text and "祿" in sf_text:
+        sub_scores["格局"] += 30
+        process_logs["格局"].append("🥇 天同化祿，自帶療癒氣場，讓人放下防備 (+30分)")
     if "太陽" in sf_text and "太陰" in sf_text:
-        sub_scores["格局"] += 20
-        process_logs["格局"].append("☀️🌙 三方日月並明，磁場和諧吸引好機遇 (+20分)")
-        
-    if "太陰" in sf_text and "化科" in sf_text:
-        sub_scores["格局"] += 25
-        process_logs["格局"].append("🌕 太陰化科大加分！氣質迷人吸引貴人 (+25分)")
-        
-    if "太陽" in sf_text and "化權" in sf_text:
-        sub_scores["格局"] += 15
-        process_logs["格局"].append("☀️ 太陽化權！充滿自信，利於主導交流 (+15分)")
-
+        sub_scores["格局"] += 28
+        process_logs["格局"].append("☀️🌙 三方日月並明，磁場和諧吸引好機遇 (+28分)")
     if "天機" in sf_text and "太陰" in sf_text:
-        sub_scores["格局"] += 15
-        process_logs["格局"].append("🧠 天機太陰，心思細膩，社交進退得宜 (+15分)")
+        sub_scores["格局"] += 25
+        process_logs["格局"].append("🧠 天機太陰，心思細膩，社交進退得宜 (+25分)")
+    if "貪狼" in sf_text and "祿" in sf_text:
+        sub_scores["格局"] += 22
+        process_logs["格局"].append("🏅 貪狼化祿，情商天花板，自帶幽默魅力 (+22分)")
+    if "太陽" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 20
+        process_logs["格局"].append("☀️ 太陽化科，行走暖陽，談吐優雅備受讚譽 (+20分)")
         
+    # 🏆 終極人見人愛排行榜 (進階分群)
+    if "廉貞" in sf_text and "貪狼" in sf_text:
+        sub_scores["格局"] += 18
+        process_logs["格局"].append("🏅 廉貞貪狼：風情萬種，擄獲異性目光 (+18分)")
+    if "太陰" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 16
+        process_logs["格局"].append("🌕 太陰化科大加分！氣質迷人吸引貴人 (+16分)")
+    if "紫微" in sf_text and "貪狼" in sf_text:
+        sub_scores["格局"] += 14
+        process_logs["格局"].append("🏅 紫微貪狼：高貴得體，魅力氣場四溢 (+14分)")
+    if "太陽" in sf_text and "權" in sf_text:
+        sub_scores["格局"] += 12
+        process_logs["格局"].append("🏅 太陽化權：霸氣能幹，讓人敬畏崇拜 (+12分)")
     if "天機" in sf_text and "巨門" in sf_text:
-        sub_scores["格局"] += 15
-        process_logs["格局"].append("💬 天機巨門，話題豐富，適合知性交流 (+15分)")
+        sub_scores["格局"] += 10
+        process_logs["格局"].append("💬 天機巨門，話題豐富，適合知性交流 (+10分)")
 
+    # 基礎行動星判定
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
-            sub_scores["格局"] += 5
-            process_logs["格局"].append(f"🚶‍♂️ 三方見行動星 `{star}` (+5分)")
+            brightness = get_star_brightness(star, sf_text)
+            if brightness >= 1.1: 
+                sub_scores["格局"] += 5
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (廟旺)，能量爆發 (+5分)")
+            else:
+                sub_scores["格局"] += 2
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+2分)")
+
 
     # 模組 2：社交
     peach_stars = ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"]
