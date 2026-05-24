@@ -789,7 +789,7 @@ if st.session_state.birth_chart:
                 for log in b_opp_logs[cat]:
                     st.caption(log)
     
-     隱藏網站抓取到的本命盤，收合於擴展區塊內
+     #隱藏網站抓取到的本命盤，收合於擴展區塊內
     with st.expander("🗺️ 點此展開查看原始本命盤表格"):
         components.html(st.session_state.birth_chart, height=550, scrolling=True)
 else:
