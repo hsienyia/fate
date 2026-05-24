@@ -12,27 +12,8 @@ HEADERS = {
     "Referer": "https://fate.windada.com/"
 }
 
-# --- 1. 網頁基本設定 & CSS 強制不換行 ---
+# --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="紫微命盤查詢系統", page_icon="🔮", layout="wide")
-
-# 透過 CSS 強制讓 st.metric 並排不換行，並稍微縮小數字字體以適應寬度
-st.markdown(
-    """
-    <style>
-    div[data-testid="metric-container"] {
-        white-space: nowrap !important;
-    }
-    div[data-testid="stMetricValue"] {
-        font-size: 1.6rem !important;
-    }
-    div[data-testid="stMetricDelta"] {
-        font-size: 0.9rem !important;
-    }
-    </style>
-    """, 
-    unsafe_allow_html=True
-)
-
 st.title("🔮 紫微命盤抓取系統 (兩階段拆解版)")
 st.write("完全模擬網站流程：先取得本命盤 ➔ 再疊加流時盤")
 
@@ -722,12 +703,33 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
             st.error("⚠️ 盤勢風險高！命遷福受空劫忌重擊，建議空手觀望。")
 
     st.markdown("#### 🎯 各維度獨立評分")
-    sc1, sc2, sc3, sc4 = st.columns(4)
-    # 文字精簡化，搭配頂部 CSS 確保不換行
-    sc1.metric("流年 (15%)", f"{individual_scores['流年盤']}", f"貢獻: {round(individual_scores['流年盤']*0.15, 1)}", delta_color="off")
-    sc2.metric("流月 (15%)", f"{individual_scores['流月盤']}", f"貢獻: {round(individual_scores['流月盤']*0.15, 1)}", delta_color="off")
-    sc3.metric("流日 (30%)", f"{individual_scores['流日盤']}", f"貢獻: {round(individual_scores['流日盤']*0.30, 1)}", delta_color="off")
-    sc4.metric("流時 (40%)", f"{individual_scores['流時盤']}", f"貢獻: {round(individual_scores['流時盤']*0.40, 1)}", delta_color="off")
+    
+    # 使用 HTML Flexbox 強制四個分數並排，徹底解決手機斷行問題
+    luck_metrics_html = f"""
+    <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; text-align: left; background: rgba(128,128,128,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px; overflow-x: auto;">
+        <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-right: 5px;">
+            <div style="font-size: 0.8rem; color: gray;">流年(15%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{individual_scores['流年盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(individual_scores['流年盤']*0.15, 1)}</div>
+        </div>
+        <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
+            <div style="font-size: 0.8rem; color: gray;">流月(15%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{individual_scores['流月盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(individual_scores['流月盤']*0.15, 1)}</div>
+        </div>
+        <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
+            <div style="font-size: 0.8rem; color: gray;">流日(30%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{individual_scores['流日盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(individual_scores['流日盤']*0.30, 1)}</div>
+        </div>
+        <div style="flex: 1; min-width: 70px; padding-left: 10px;">
+            <div style="font-size: 0.8rem; color: gray;">流時(40%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{individual_scores['流時盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(individual_scores['流時盤']*0.40, 1)}</div>
+        </div>
+    </div>
+    """
+    st.markdown(luck_metrics_html, unsafe_allow_html=True)
 
     with st.expander("📝 點此展開查看各盤詳細計算過程 (好運指數)"):
         log_c1, log_c2 = st.columns(2)
@@ -771,12 +773,33 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
 
     # === 新增：機運指數各維度獨立評分 ===
     st.markdown("#### 🎯 機運各維度獨立評分 (著重短線動能)")
-    osc1, osc2, osc3, osc4 = st.columns(4)
-    # 文字精簡化，搭配頂部 CSS 確保不換行
-    osc1.metric("流年 (10%)", f"{opp_scores['流年盤']}", f"貢獻: {round(opp_scores['流年盤']*0.10, 1)}", delta_color="off")
-    osc2.metric("流月 (10%)", f"{opp_scores['流月盤']}", f"貢獻: {round(opp_scores['流月盤']*0.10, 1)}", delta_color="off")
-    osc3.metric("流日 (40%)", f"{opp_scores['流日盤']}", f"貢獻: {round(opp_scores['流日盤']*0.40, 1)}", delta_color="off")
-    osc4.metric("流時 (40%)", f"{opp_scores['流時盤']}", f"貢獻: {round(opp_scores['流時盤']*0.40, 1)}", delta_color="off")
+    
+    # 使用 HTML Flexbox 強制四個分數並排
+    opp_metrics_html = f"""
+    <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; text-align: left; background: rgba(128,128,128,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px; overflow-x: auto;">
+        <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-right: 5px;">
+            <div style="font-size: 0.8rem; color: gray;">流年(10%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流年盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流年盤']*0.10, 1)}</div>
+        </div>
+        <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
+            <div style="font-size: 0.8rem; color: gray;">流月(10%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流月盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流月盤']*0.10, 1)}</div>
+        </div>
+        <div style="flex: 1; min-width: 70px; border-right: 1px solid rgba(128,128,128,0.2); padding-left: 10px; padding-right: 5px;">
+            <div style="font-size: 0.8rem; color: gray;">流日(40%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流日盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流日盤']*0.40, 1)}</div>
+        </div>
+        <div style="flex: 1; min-width: 70px; padding-left: 10px;">
+            <div style="font-size: 0.8rem; color: gray;">流時(40%)</div>
+            <div style="font-size: 1.6rem; font-weight: 600;">{opp_scores['流時盤']}</div>
+            <div style="font-size: 0.75rem; color: gray;">↑ 貢獻: {round(opp_scores['流時盤']*0.40, 1)}</div>
+        </div>
+    </div>
+    """
+    st.markdown(opp_metrics_html, unsafe_allow_html=True)
 
     with st.expander("📝 點此展開查看【機運指數】三大項目詳細算分明細"):
         for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
