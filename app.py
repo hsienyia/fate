@@ -67,7 +67,7 @@ with col_left:
         c1, c2, c3 = st.columns(3)
         year = c1.number_input("出生年 (西元)", min_value=1900, max_value=2100, value=1992)
         month = c2.number_input("出生月", min_value=1, max_value=12, value=6)
-        day = c3.number_input("出生日", min_value=1, max_value=31, value=18)
+        day = c3.number_input("出生日", min_value=1, max_value=31, value=1)
         
         hours_map = {
             "子時 (23:00 - 01:00)": "0", "丑時 (01:00 - 03:00)": "2", "寅時 (03:00 - 05:00)": "4",
