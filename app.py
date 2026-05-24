@@ -523,13 +523,165 @@ def get_total_opportunity_index(charts_dict):
     total = (scores["流年盤"] * 0.1) + (scores["流月盤"] * 0.1) + (scores["流日盤"] * 0.4) + (scores["流時盤"] * 0.4)
     return round(total, 1), scores, sub_scores_dict, logs
 
+# ==========================================
+# 引擎區塊 3：本命盤基礎底蘊 (財運/機運)
+# ==========================================
+def calculate_birth_wealth(html_content):
+    if not html_content: return 50, ["無資料"]
+    soup = BeautifulSoup(html_content, 'html.parser')
+    cells = soup.find_all('td', width="25%")
+    if len(cells) != 12: return 50, ["格式錯誤"]
+    
+    cell_texts = [cell.get_text() for cell in cells]
+    clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
+    
+    ming_pos = -1
+    for i, idx in enumerate(clockwise_indices):
+        if "【命宮】" in cell_texts[idx]:
+            ming_pos = i; break
+            
+    if ming_pos == -1: return 50, ["找不到命宮"]
 
+    ming = cell_texts[clockwise_indices[ming_pos]]
+    fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
+    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  
+    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]  
+    cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  
+    
+    palaces_to_check = [(ming, True, "本命命宮"), (qian, True, "本命遷移"), (fu, True, "本命福德"), (cai, False, "本命財帛"), (guan, False, "本命事業")]
+    score = 60
+    process_log = ["**🔹 本命財運起算分: 60 分**"]
+    
+    for p_text, is_mqf, p_name in palaces_to_check:
+        lu_count = len(re.findall(r'祿', p_text)); quan_count = len(re.findall(r'權', p_text)); ke_count = len(re.findall(r'科', p_text))
+        if lu_count > 0: score += (lu_count * 10); process_log.append(f"✅ `{p_name}` 見祿星 x{lu_count} (+{lu_count*10}分)")
+        if quan_count > 0 or ke_count > 0: pts = (quan_count + ke_count) * 5; score += pts; process_log.append(f"✅ `{p_name}` 見權/科 (+{pts}分)")
+        
+        wealth_stars = sum(1 for star in ["武曲", "太陰", "天府"] if star in p_text)
+        if "貪狼" in p_text and any(s in p_text for s in ["紅鸞", "天喜", "咸池", "天姚", "沐浴"]): wealth_stars += 1; process_log.append(f"✅ `{p_name}` 貪狼逢桃花財 (+加計1財星)")
+        if "天梁" in p_text and "太陽" in p_text: wealth_stars += 1; process_log.append(f"✅ `{p_name}` 陽梁蔭星財 (+加計1財星)")
+        if wealth_stars > 0: score += (wealth_stars * 5); process_log.append(f"💰 `{p_name}` 財星數量 x{wealth_stars} (+{wealth_stars*5}分)")
+        
+        ma_count = len(re.findall(r'馬', p_text))
+        if ma_count > 0:
+            score += (ma_count * 5); process_log.append(f"🐎 `{p_name}` 見天馬 (+{ma_count*5}分)")
+            if lu_count > 0: score += 15; process_log.append(f"🔥 `{p_name}` 祿馬交馳爆發 (+15分)")
+            if "陀" in p_text: score -= 20; process_log.append(f"⚠️ `{p_name}` 陀羅折足馬 (-20分)")
+            
+        has_kong_soft = "旬空" in p_text or "天空" in p_text
+        has_kong_hard = "地空" in p_text
+        has_jie_hard = "地劫" in p_text
+        if has_kong_hard and has_jie_hard: score -= 100; process_log.append(f"❌ `{p_name}` 地空地劫同宮重傷 (-100分)")
+        elif has_kong_hard or has_jie_hard: score -= 40; process_log.append(f"❌ `{p_name}` 逢空/劫星 (-40分)")
+        elif has_kong_soft: score -= 5; process_log.append(f"❌ `{p_name}` 逢旬空/天空星 (-5分)")
+                
+        ji_count = len(re.findall(r'忌', p_text))
+        if ji_count > 0:
+            if any(f"{star}廟" in p_text or f"{star}旺" in p_text for star in ["武曲", "太陰", "太陽", "天機", "天同"]): process_log.append(f"🛡️ `{p_name}` 逢忌，但廟旺豁免")
+            else: score -= (ji_count * 20); process_log.append(f"❌ `{p_name}` 逢忌煞 x{ji_count} (-{ji_count*20}分)")
+
+    return max(0, min(200, score)), process_log
+
+def calculate_birth_opportunity(html_content):
+    base_score = 30 
+    sub_scores = {"格局": 0, "社交": 0, "貴人": 0}; process_logs = {"格局": ["**✨ 機運起算分: 30 分**"], "社交": [], "貴人": []}
+    if not html_content: return base_score, sub_scores, process_logs
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+    cells = soup.find_all('td', width="25%")
+    if len(cells) != 12: return base_score, sub_scores, process_logs
+    
+    cell_texts = [cell.get_text() for cell in cells]
+    clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
+    
+    ming_pos = -1
+    for i, idx in enumerate(clockwise_indices):
+        if "【命宮】" in cell_texts[idx]:
+            ming_pos = i; break
+            
+    if ming_pos == -1: return base_score, sub_scores, process_logs
+
+    ming = cell_texts[clockwise_indices[ming_pos]]; fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
+    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]; jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
+    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]; cai = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]
+    xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]] 
+    
+    sf_text = ming + cai + guan + qian; social_text = ming + fumu + guan + jiao + qian 
+    
+    # 模組 1：格局
+    if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]): sub_scores["格局"] += 25; process_logs["格局"].append("✨ 三方觸發「機月同梁」 (+25分)")
+    if "太陽" in sf_text and "太陰" in sf_text: sub_scores["格局"] += 20; process_logs["格局"].append("☀️🌙 三方日月並明 (+20分)")
+    if "太陰" in sf_text and "化科" in sf_text: sub_scores["格局"] += 25; process_logs["格局"].append("🌕 太陰化科大加分 (+25分)")
+    if "太陽" in sf_text and "化權" in sf_text: sub_scores["格局"] += 15; process_logs["格局"].append("☀️ 太陽化權 (+15分)")
+    if "天機" in sf_text and "太陰" in sf_text: sub_scores["格局"] += 15; process_logs["格局"].append("🧠 天機太陰 (+15分)")
+    if "天機" in sf_text and "巨門" in sf_text: sub_scores["格局"] += 15; process_logs["格局"].append("💬 天機巨門 (+15分)")
+    for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
+        if star in sf_text: sub_scores["格局"] += 5; process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (+5分)")
+
+    # 模組 2：社交
+    peach_count = sum(social_text.count(s) for s in ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"])
+    if peach_count > 0: sub_scores["社交"] += (peach_count * 5); process_logs["社交"].append(f"🌸 桃花/人緣星 x{peach_count} (+{peach_count*5}分)")
+    for star in ["祿", "權", "科"]:
+        c = social_text.count(star)
+        if c > 0: sub_scores["社交"] += (c * 5); process_logs["社交"].append(f"📈 社交面四化 `{star}` x{c} (+{c*5}分)")
+    ji_count = social_text.count("忌")
+    if ji_count > 0: sub_scores["社交"] -= (ji_count * 10); process_logs["社交"].append(f"📉 社交面化忌 x{ji_count} (-{ji_count*10}分)")
+    for p_name, p_text in [("本命遷移", qian), ("本命交友", jiao)]:
+        if "馬" in p_text:
+            if "陀" in p_text: sub_scores["社交"] -= 20; process_logs["社交"].append(f"⚠️ `{p_name}` 拐腳馬 (-20分)")
+            else: sub_scores["社交"] += 15; process_logs["社交"].append(f"🐎 `{p_name}` 見天馬 (+15分)")
+    for star, pts in {"孤辰": 15, "寡宿": 15, "地空": 20, "地劫": 20, "鈴星": 15, "陀羅": 15}.items():
+        if star in social_text: sub_scores["社交"] -= pts; process_logs["社交"].append(f"🏠 `{star}` 發威 (-{pts}分)")
+
+    # 模組 3：貴人
+    if "紫微" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("👑 本命遷移見紫微 (+20分)")
+    if "天府" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("🏰 本命遷移見天府 (+20分)")
+    for star, pts in {"天魁": 10, "天鉞": 10, "左輔": 10, "右弼": 10}.items():
+        c = social_text.count(star)
+        if c > 0: sub_scores["貴人"] += (c * pts); process_logs["貴人"].append(f"🤝 活躍區見 `{star}` x{c} (+{c*pts}分)")
+    for p_name, p_text in [("本命", ming), ("本命事業", guan), ("本命父母", fumu), ("本命交友", jiao)]:
+        if "天梁" in p_text: sub_scores["貴人"] += 10; process_logs["貴人"].append(f"🤝 `{p_name}` 見蔭星天梁 (+10分)")
+        if "紫微" in p_text: sub_scores["貴人"] += 5; process_logs["貴人"].append(f"🤝 `{p_name}` 見領導星紫微 (+5分)")
+    if ("左輔" in fumu and "右弼" in xiong) or ("左輔" in xiong and "右弼" in fumu) or ("天魁" in fumu and "天鉞" in xiong) or ("天魁" in xiong and "天鉞" in fumu):
+        sub_scores["貴人"] += 20; process_logs["貴人"].append("🧱 左右/魁鉞夾命 (+20分)")
+
+    return max(0, base_score + sub_scores["格局"] + sub_scores["社交"] + sub_scores["貴人"]), sub_scores, process_logs
+    
 # ==========================================
 # 3. 畫面顯示區 (儀表板渲染)
 # ==========================================
-st.markdown("<h3 style='text-align: center;'>🪐 核心：本命盤</h3>", unsafe_allow_html=True)
+st.markdown("---")
+st.markdown("### 🪐 核心：本命盤與基礎體質 (初始能力值)")
+
 if st.session_state.birth_chart:
-    components.html(st.session_state.birth_chart, height=550, scrolling=True)
+    # 建立比例為 2:1 的左右欄位
+    b_col1, b_col2 = st.columns([2, 1])
+    
+    with b_col1:
+        # 左側：顯示原始命盤
+        components.html(st.session_state.birth_chart, height=550, scrolling=True)
+        
+    with b_col2:
+        # 右側：計算並顯示本命基礎體質
+        st.markdown("#### 🧬 本命基礎底蘊")
+        b_wealth_score, b_wealth_logs = calculate_birth_wealth(st.session_state.birth_chart)
+        b_opp_score, b_opp_subs, b_opp_logs = calculate_birth_opportunity(st.session_state.birth_chart)
+        
+        # 財運底蘊
+        st.metric("💰 本命財運基礎分", f"{b_wealth_score} 分")
+        with st.expander("📝 展開查看本命財運算分明細"):
+            for log in b_wealth_logs:
+                st.caption(log)
+                
+        st.markdown("---")
+        
+        # 機運底蘊
+        st.metric("🕊️ 本命社交機運基礎分", f"{b_opp_score} 分")
+        with st.expander("📝 展開查看本命機運算分明細"):
+            st.write(f"**格局:** `{b_opp_subs['格局']:+d}` | **社交:** `{b_opp_subs['社交']:+d}` | **貴人:** `{b_opp_subs['貴人']:+d}`")
+            for cat in ["格局", "社交", "貴人"]:
+                for log in b_opp_logs[cat]:
+                    st.caption(log)
 else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
