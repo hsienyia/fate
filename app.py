@@ -738,8 +738,8 @@ if st.session_state.birth_chart:
                     st.caption(log)
     
     # 隱藏網站抓取到的本命盤，收合於擴展區塊內
-    with st.expander("🗺️ 點此展開查看原始本命盤表格"):
-        components.html(st.session_state.birth_chart, height=550, scrolling=True)
+    #with st.expander("🗺️ 點此展開查看原始本命盤表格"):
+    #    components.html(st.session_state.birth_chart, height=550, scrolling=True)
 else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
@@ -905,26 +905,26 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
             st.markdown("---")
 
 # 顯示四個流轉盤
-if hasattr(st.session_state, 'transit_charts') and st.session_state.transit_charts:
-    st.markdown("---")
-    with st.expander("🗺️ 點此展開查看流年/流月/流日/流時真實命盤表格"):
-        col1, col2 = st.columns(2)
-        col3, col4 = st.columns(2)
+#if hasattr(st.session_state, 'transit_charts') and st.session_state.transit_charts:
+#    st.markdown("---")
+#    with st.expander("🗺️ 點此展開查看流年/流月/流日/流時真實命盤表格"):
+#        col1, col2 = st.columns(2)
+#        col3, col4 = st.columns(2)
         
-        grid_mapping = [
-            ("流年盤", col1),
-            ("流月盤", col2),
-            ("流日盤", col3),
-            ("流時盤", col4)
-        ]
+#        grid_mapping = [
+#            ("流年盤", col1),
+#            ("流月盤", col2),
+#            ("流日盤", col3),
+#            ("流時盤", col4)
+#        ]
         
-        for title, col in grid_mapping:
-            with col:
-                st.markdown(f"<h4 style='text-align: center;'>{title}</h4>", unsafe_allow_html=True)
-                if title in st.session_state.transit_charts:
-                    components.html(st.session_state.transit_charts[title], height=500, scrolling=True)
-                else:
-                    st.warning(f"無法取得{title}資料")
+#        for title, col in grid_mapping:
+#            with col:
+#                st.markdown(f"<h4 style='text-align: center;'>{title}</h4>", unsafe_allow_html=True)
+#                if title in st.session_state.transit_charts:
+#                    components.html(st.session_state.transit_charts[title], height=500, scrolling=True)
+#                else:
+#                    st.warning(f"無法取得{title}資料")
                     
 elif st.session_state.step1_done:
     st.info("本命盤已就緒！請設定上方流轉日期後，點擊「🚀 一鍵取得四重流轉盤」。")
