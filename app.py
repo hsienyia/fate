@@ -1180,7 +1180,7 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
 
     with st.expander("📝 點此展開查看【機運指數】三大項目詳細算分明細"):
         for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
-            st.markdown(f"#### 🧭 【{mode}】結算總分: {opp_scores[mode]} 分 (基準分: 30)")
+            st.markdown(f"#### 🧭 【{mode}】結算總分: {opp_scores[mode]} 分 (基準分: 0)")
             
             col_p, col_s, col_n = st.columns(3)
             
