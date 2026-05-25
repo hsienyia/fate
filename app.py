@@ -402,7 +402,7 @@ def calculate_opportunity_score(html_content, mode):
     
     sub_scores = {"格局": 0, "社交": 0, "貴人": 0}
     process_logs = {"格局": [], "社交": [], "貴人": []}
-    process_logs["格局"].append(f"**✨ {mode}機運起算分: 30 分 (嚴格校準版)**") 
+    process_logs["格局"].append(f"**✨ {mode}機運起算分: 0 分**") 
     
     if not html_content: return base_score, sub_scores, process_logs
     
@@ -433,12 +433,14 @@ def calculate_opportunity_score(html_content, mode):
     # ---------------------------
 
     ming  = cell_texts[clockwise_indices[ming_pos]]
-    fumu  = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]  
+    fumu  = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
+    fu    = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]
     guan  = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  
     jiao  = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]  
     qian  = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]  
-    jie   = cell_texts[clockwise_indices[(ming_pos + 7) % 12]]  # 🔺 夾遷移宮專用
-    cai   = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  
+    jie   = cell_texts[clockwise_indices[(ming_pos + 7) % 12]]  
+    cai   = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]
+    fuqi  = cell_texts[clockwise_indices[(ming_pos + 10) % 12]]
     xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]] 
     
     sf_text = ming + cai + guan + qian 
@@ -451,7 +453,7 @@ def calculate_opportunity_score(html_content, mode):
     # 模組 1：流轉盤格局與魅力榜 (嚴格鎖定核心活躍區)
     # ==========================================
     
-    # 🏆 1. 跨宮位核心大格局 (這個看整體三方四正，所以維持用 sf_text)
+    # 🏆 1. 跨宮位核心大格局
     if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]):
         sub_scores["格局"] += 25
         process_logs["格局"].append("✨ 活躍區觸發「機月同梁」，團隊協作效率大增 (+25分)")
@@ -488,7 +490,7 @@ def calculate_opportunity_score(html_content, mode):
     if any("天梁" in p and "科" in p for p in active_cells):
         sub_scores["格局"] += 10; process_logs["格局"].append("🛡️ 活躍區見天梁化科，逢凶化吉，易得長輩救援 (+10分)")
 
-    # 🚶‍♂️ 4. 基礎行動星判定 (這個看整體氣場，維持 sf_text 即可)
+    # 🚶‍♂️ 4. 基礎行動星判定
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
@@ -499,39 +501,55 @@ def calculate_opportunity_score(html_content, mode):
                 sub_scores["格局"] += 0
                 process_logs["格局"].append(f"🚶‍♂️ 活躍區見 `{star}` (平陷)，能量平平 (+0分)")
 
-    has_tan_opp = "貪狼" in sf_text
-    has_huo_opp = "火星" in sf_text
-    has_ling_opp = "鈴星" in sf_text
-    has_lu_opp = "祿" in sf_text or "祿存" in sf_text
-    has_kongjie_opp = "地空" in sf_text or "地劫" in sf_text
+    # ----------------------------------------
+    # 🔺 終極嚴格版：火鈴貪爆發與空劫黑洞空間定位
+    # ----------------------------------------
+    active_pairs = [
+        (ming, qian, "命宮"),
+        (cai, fu, "財帛宮"),
+        (guan, fuqi, "事業宮"),
+        (qian, ming, "遷移宮")
+    ]
     
-    # 🔺 紀錄是否觸發火貪空劫
-    is_huotan_boom = has_tan_opp and (has_huo_opp or has_ling_opp) and has_kongjie_opp
+    is_huotan_boom = False
+    is_huotan_lu = False
+    is_huotan_basic = False
+    
+    for p_text, opp_text, p_name in active_pairs:
+        # 貪狼必須跟火星/鈴星「同一個宮位」
+        if "貪狼" in p_text and ("火星" in p_text or "鈴星" in p_text):
+            # 必須在「同宮」或「對宮」才算引爆空劫
+            if "地空" in p_text or "地劫" in p_text or "地空" in opp_text or "地劫" in opp_text:
+                is_huotan_boom = True
+            elif "祿" in sf_text or "祿存" in sf_text:
+                is_huotan_lu = True
+            else:
+                is_huotan_basic = True
 
-    if has_tan_opp and (has_huo_opp or has_ling_opp):
-        if has_kongjie_opp:
-            sub_scores["格局"] -= 50
-            process_logs["格局"].append("⚠️ 火貪空劫，曇花一現，當心社交圈的突發炎上 (-50分)")
-        elif has_lu_opp:
-            sub_scores["格局"] += 40
-            process_logs["格局"].append("🔥 火鈴貪祿，人氣爆棚，自帶流量的超級發電機 (+40分)")
-        else:
-            sub_scores["格局"] += 15
-            process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
+    if is_huotan_boom:
+        sub_scores["格局"] -= 50
+        process_logs["格局"].append("⚠️ 火/鈴貪逢空劫(同/對宮)，曇花一現，當心社交圈突發炎上 (-50分)")
+    elif is_huotan_lu:
+        sub_scores["格局"] += 40
+        process_logs["格局"].append("🔥 火/鈴貪祿同宮發動，人氣爆棚，自帶流量的超級發電機 (+40分)")
+    elif is_huotan_basic:
+        sub_scores["格局"] += 15
+        process_logs["格局"].append("⚡ 火/鈴貪強勢成格，魅力四射，突如其來的社交好機遇 (+15分)")
 
+    # 🛡️ 5. 社交魅力防護網
     breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20} 
     for star, pts in breaker_stars.items():
         if star in sf_text:
-            # 🔺 空劫豁免權發動
             if (star == "地空" or star == "地劫") and is_huotan_boom:
                 continue
             sub_scores["格局"] -= pts
             process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
             
-    if has_huo_opp and not has_tan_opp:
+    has_tan_sf = "貪狼" in sf_text
+    if "火星" in sf_text and not has_tan_sf:
         sub_scores["格局"] -= 10
         process_logs["格局"].append("🔥 `火星` 攪局，情緒急躁，容易瞬間破壞人緣氣場 (-10分)")
-    if has_ling_opp and not has_tan_opp:
+    if "鈴星" in sf_text and not has_tan_sf:
         sub_scores["格局"] -= 10
         process_logs["格局"].append("🔔 `鈴星` 攪局，陰鬱不滿，讓人覺得難以親近與溝通 (-10分)")
 
@@ -543,30 +561,30 @@ def calculate_opportunity_score(html_content, mode):
     # 模組 2：社交 (活躍度與人際內耗)
     # ==========================================
     peach_stars = ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"]
-    peach_count = sum(social_text.count(s) for s in peach_stars)
+    peach_count = sum(1 for s in peach_stars if s in social_text)
     if peach_count > 0:
-        sub_scores["社交"] += (peach_count * 5)
-        process_logs["社交"].append(f"🌸 偵測到桃花/人緣星 x{peach_count} (+{peach_count*5}分)")
+        pts = peach_count * 5
+        sub_scores["社交"] += pts
+        process_logs["社交"].append(f"🌸 偵測到桃花/人緣星氣場 (+{pts}分)")
 
     for star in ["祿", "權", "科"]:
-        count = social_text.count(star)
-        if count > 0:
-            sub_scores["社交"] += (count * 5)
-            process_logs["社交"].append(f"📈 社交面四化 `{star}` x{count} (+{count*5}分)")
+        if star in social_text:
+            sub_scores["社交"] += 5
+            process_logs["社交"].append(f"📈 社交活躍區見化 `{star}` 能量 (+5分)")
             
-    ji_count = social_text.count("忌")
+    ji_count = min(2, social_text.count("忌"))
     if ji_count > 0:
         sub_scores["社交"] -= (ji_count * 10)
-        process_logs["社交"].append(f"📉 社交面化忌 x{ji_count} (-{ji_count*10}分)")
+        process_logs["社交"].append(f"📉 社交面見化忌干擾 (-{ji_count*10}分)")
 
     for p_name, p_text in [("遷移宮", qian), ("交友宮", jiao)]:
         if "馬" in p_text:
             if "陀" in p_text:
-                sub_scores["社交"] -= 20
-                process_logs["社交"].append(f"⚠️ `{p_name}` 陀羅遇天馬成「拐腳馬」 (-20分)")
+                sub_scores["社交"] -= 15
+                process_logs["社交"].append(f"⚠️ `{p_name}` 陀羅遇天馬成「拐腳馬」 (-15分)")
             else:
-                sub_scores["社交"] += 15
-                process_logs["社交"].append(f"🐎 `{p_name}` 見天馬，鼓勵外出 (+15分)")
+                sub_scores["社交"] += 10
+                process_logs["社交"].append(f"🐎 `{p_name}` 見天馬，鼓勵外出 (+10分)")
 
     isolating_stars = {"孤辰": 15, "寡宿": 15}
     for star, pts in isolating_stars.items():
@@ -578,44 +596,41 @@ def calculate_opportunity_score(html_content, mode):
     # 模組 3：貴人 (包含夾命宮與夾遷移宮)
     # ==========================================
     if "紫微" in qian:
-        sub_scores["貴人"] += 20
-        process_logs["貴人"].append("👑 遷移宮見紫微，遇強大貴人提攜 (+20分)")
+        sub_scores["貴人"] += 10
+        process_logs["貴人"].append("👑 遷移宮見紫微，遇貴人提攜 (+10分)")
     if "天府" in qian:
-        sub_scores["貴人"] += 20
-        process_logs["貴人"].append("🏰 遷移宮見天府，得厚實助力資源 (+20分)")
+        sub_scores["貴人"] += 10
+        process_logs["貴人"].append("🏰 遷移宮見天府，得厚實助力 (+10分)")
     if "天梁" in qian:
         process_logs["貴人"].append("👀 遷移宮見天梁，主逢災化吉，不予加分")
 
-    nobility_stars = {"天魁": 10, "天鉞": 10, "左輔": 10, "右弼": 10}
+    nobility_stars = {"天魁": 5, "天鉞": 5, "左輔": 5, "右弼": 5} 
     for star, pts in nobility_stars.items():
-        count = social_text.count(star)
-        if count > 0:
-            sub_scores["貴人"] += (count * pts)
-            process_logs["貴人"].append(f"🤝 活躍區見貴人 `{star}` x{count} (+{count*pts}分)")
+        if star in social_text:
+            sub_scores["貴人"] += pts
+            process_logs["貴人"].append(f"🤝 活躍區見貴人 `{star}` (+{pts}分)")
 
     for p_name, p_text in [("命宮", ming), ("事業宮", guan), ("父母宮", fumu), ("交友宮", jiao)]:
         if "天梁" in p_text:
-            sub_scores["貴人"] += 10
-            process_logs["貴人"].append(f"🤝 `{p_name}` 見蔭星 `天梁` (+10分)")
+            sub_scores["貴人"] += 5
+            process_logs["貴人"].append(f"🤝 `{p_name}` 見蔭星 `天梁` (+5分)")
         if "紫微" in p_text:
             sub_scores["貴人"] += 5
             process_logs["貴人"].append(f"🤝 `{p_name}` 見領導星 `紫微` (+5分)")
 
-    # 🧱 夾宮貴人判定：夾命宮 (父母 + 兄弟)
+    # 🧱 夾宮貴人判定
     has_zuoyou_jia_ming = ("左輔" in fumu and "右弼" in xiong) or ("左輔" in xiong and "右弼" in fumu)
     has_kuiyue_jia_ming = ("天魁" in fumu and "天鉞" in xiong) or ("天魁" in xiong and "天鉞" in fumu)
     if has_zuoyou_jia_ming or has_kuiyue_jia_ming:
-        sub_scores["貴人"] += 20
-        process_logs["貴人"].append("🧱 左右/魁鉞夾命，貴人暗中護體 (+20分)")
+        sub_scores["貴人"] += 10
+        process_logs["貴人"].append("🧱 左右/魁鉞夾命，貴人護體 (+10分)")
 
-    # 🧱 夾宮貴人判定：夾遷移宮 (交友 + 疾厄)
     has_zuoyou_jia_qian = ("左輔" in jiao and "右弼" in jie) or ("左輔" in jie and "右弼" in jiao)
     has_kuiyue_jia_qian = ("天魁" in jiao and "天鉞" in jie) or ("天魁" in jie and "天鉞" in jiao)
     if has_zuoyou_jia_qian or has_kuiyue_jia_qian:
-        sub_scores["貴人"] += 20
-        process_logs["貴人"].append("🧱 左右/魁鉞夾遷移，出外發展暗藏強大助力 (+20分)")
+        sub_scores["貴人"] += 10
+        process_logs["貴人"].append("🧱 左右/魁鉞夾遷移，暗藏助力 (+10分)")
 
-    # 🔺 最重要的這兩行回來了！
     total_score = base_score + sub_scores["格局"] + sub_scores["社交"] + sub_scores["貴人"]
     return max(0, min(200, total_score)), sub_scores, process_logs
 
@@ -638,18 +653,15 @@ def get_total_opportunity_index(charts_dict):
 # ==========================================
 # 引擎區塊 3：本命盤基礎底蘊 (財運/機運)
 # ==========================================
-# 亮度權重映射 (廟: 1.2, 旺: 1.1, 地/利: 1.0, 平: 0.8, 陷: 0.5)
 BRIGHTNESS_MAP = {"廟": 1.2, "旺": 1.1, "地": 1.0, "利": 1.0, "平": 0.8, "陷": 0.5}
 
 def get_star_brightness(star_name, palace_text):
-    """從宮位文字中提取該星曜的亮度"""
-    # 正規表達式尋找：星名後緊跟亮度字元
     pattern = f"{star_name}([廟旺地利平陷])"
     match = re.search(pattern, palace_text)
     if match:
         brightness = match.group(1)
         return BRIGHTNESS_MAP.get(brightness, 1.0)
-    return 1.0 # 若找不到則視為 1.0
+    return 1.0 
 
 def calculate_birth_wealth(html_content):
     if not html_content: return 50, ["無資料"]
@@ -660,7 +672,6 @@ def calculate_birth_wealth(html_content):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
-    # --- 最強雙重防護定位命宮 ---
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
         cell_html = str(cells[idx]).replace(" ", "").upper()
@@ -673,7 +684,6 @@ def calculate_birth_wealth(html_content):
                 ming_pos = i; break
                 
     if ming_pos == -1: return 50, ["找不到命宮"]
-    # ---------------------------
 
     ming = cell_texts[clockwise_indices[ming_pos]]
     fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]  
@@ -685,41 +695,34 @@ def calculate_birth_wealth(html_content):
     score = 60
     process_log = ["**🔹 本命財運起算分: 60 分**"]
 
-    # 🔥 全盤掃描：本命 12 宮專屬四化彩蛋 (底蘊基因)
-    # ==========================================
     core_wealth_cells = [ming, fu, guan, qian, cai]
     
     for p_text in cell_texts:
         is_core = p_text in core_wealth_cells
         
-        # 武曲化祿
         if "武曲" in p_text and "祿" in p_text:
             if is_core:
                 score += 30; process_log.append("🌟 核心區見武曲化祿，實打實的無敵本命金庫 (+30分)")
             else:
                 score += 15; process_log.append("🌟 命盤藏武曲化祿，具備隱藏暴富底蘊，流轉引爆即發財 (+15分)")
                 
-        # 破軍化祿
         if "破軍" in p_text and "祿" in p_text:
             if is_core:
                 score += 25; process_log.append("🌪️ 核心區見破軍化祿，破繭而出，亂世抄底的暴利推手 (+25分)")
             else:
                 score += 10; process_log.append("🌪️ 命盤藏破軍化祿，具備逆轉暴利的隱藏基因 (+10分)")
                 
-        # 天機化祿
         if "天機" in p_text and "祿" in p_text:
             if is_core:
                 score += 20; process_log.append("🧠 核心區見天機化祿，智謀生財，靈活穿梭盤勢的波段神童 (+20分)")
             else:
                 score += 10; process_log.append("🧠 命盤藏天機化祿，對數字跳動具備天生敏銳度 (+10分)")
                 
-        # 武曲化權
         if "武曲" in p_text and "權" in p_text:
             if is_core:
                 score += 20; process_log.append("⚖️ 核心區見武曲化權，鐵血紀律，對資金擁有絕對掌控霸氣 (+20分)")
             else:
                 score += 10; process_log.append("⚖️ 命盤藏武曲化權，天生自帶嚴謹的資金控管基因 (+10分)")
-    # ==========================================
     
     for p_text, is_mqf, p_name in palaces_to_check:
         lu_count = len(re.findall(r'祿', p_text)); quan_count = len(re.findall(r'權', p_text)); ke_count = len(re.findall(r'科', p_text))
@@ -743,7 +746,6 @@ def calculate_birth_wealth(html_content):
                 score += 15
                 process_log.append(f"⚡ `{p_name}` 火/鈴貪強勢成格，具備強大爆發力底蘊 (+15分)")
 
-        # 💰 本命專屬四化財運彩蛋
         if "武曲" in p_text and "祿" in p_text:
             score += 30; process_log.append(f"🌟 `{p_name}` 武曲化祿，財神歸位，實打實的無敵本命金庫 (+30分)")
         if "破軍" in p_text and "祿" in p_text:
@@ -752,7 +754,7 @@ def calculate_birth_wealth(html_content):
             score += 20; process_log.append(f"🧠 `{p_name}` 天機化祿，智謀生財，靈活穿梭盤勢的波段神童 (+20分)")
         if "武曲" in p_text and "權" in p_text:
             score += 20; process_log.append(f"⚖️ `{p_name}` 武曲化權，鐵血紀律，對資金擁有絕對的掌控霸氣 (+20分)")
-        # --- 新增亮度邏輯：動態計算財星分數 ---
+            
         for star in ["武曲", "太陰", "天府"]:
             if star in p_text:
                 brightness = get_star_brightness(star, p_text)
@@ -764,7 +766,6 @@ def calculate_birth_wealth(html_content):
             score += 5; process_log.append(f"✅ `{p_name}` 貪狼逢桃花財 (+5分)")
         if "天梁" in p_text and "太陽" in p_text: 
             score += 5; process_log.append(f"✅ `{p_name}` 陽梁蔭星財 (+5分)")
-        # ----------------------------------------
         
         ma_count = len(re.findall(r'馬', p_text))
         if ma_count > 0:
@@ -798,7 +799,6 @@ def calculate_birth_opportunity(html_content):
     cell_texts = [cell.get_text() for cell in cells]
     clockwise_indices = [8, 6, 4, 0, 1, 2, 3, 5, 7, 11, 10, 9]
     
-    # --- 最強雙重防護定位命宮 ---
     ming_pos = -1
     for i, idx in enumerate(clockwise_indices):
         cell_html = str(cells[idx]).replace(" ", "").upper()
@@ -811,35 +811,29 @@ def calculate_birth_opportunity(html_content):
                 ming_pos = i; break
                 
     if ming_pos == -1: return base_score, sub_scores, process_logs
-    # ---------------------------
 
     ming = cell_texts[clockwise_indices[ming_pos]]
     fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
+    fu   = cell_texts[clockwise_indices[(ming_pos + 2) % 12]]
     guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]
     jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
     qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]
-    jie  = cell_texts[clockwise_indices[(ming_pos + 7) % 12]]  # 🔺 新增：疾厄宮 (夾遷移用)
+    jie  = cell_texts[clockwise_indices[(ming_pos + 7) % 12]] 
     cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]
+    fuqi = cell_texts[clockwise_indices[(ming_pos + 10) % 12]]
     xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]]
     
     sf_text = ming + cai + guan + qian; social_text = ming + fumu + guan + jiao + qian 
     
-    # 模組 1：格局與魅力榜
-    # 🏆 1. 跨宮位核心大格局 (需多星連動，僅限三方四正)
     if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]):
         sub_scores["格局"] += 25
         process_logs["格局"].append("✨ 核心三方觸發「機月同梁」，團隊協作效率大增 (+25分)")
 
-    # ==========================================
-    # 🕊️ 全盤掃描：12 宮底蘊基因 (5個純社交核心校準版)
-    # ==========================================
-    # 縮緊防線：僅鎖定 5 大公眾社交與貴人核心宮位
     core_opp_cells = [ming, guan, qian, fumu, jiao]
     
     for p_text in cell_texts:
         is_core = p_text in core_opp_cells
         
-        # --- A. 雙星同宮底蘊基因 ---
         if "太陽" in p_text and "太陰" in p_text:
             if is_core: sub_scores["格局"] += 28; process_logs["格局"].append("☀️🌙 核心區見日月同宮，磁場和諧吸引好機遇 (+28分)")
             else: sub_scores["格局"] += 14; process_logs["格局"].append("☀️🌙 命盤藏日月基因，具備隱藏的調和魅力 (+14分)")
@@ -860,7 +854,6 @@ def calculate_birth_opportunity(html_content):
             if is_core: sub_scores["格局"] += 10; process_logs["格局"].append("💬 核心區見機巨同宮，話題豐富適合知性交流 (+10分)")
             else: sub_scores["格局"] += 5; process_logs["格局"].append("💬 命盤藏機巨基因，具備隱藏的知性對話能力 (+5分)")
 
-        # --- B. 四化專屬底蘊基因 ---
         if "天同" in p_text and "祿" in p_text:
             if is_core: sub_scores["格局"] += 30; process_logs["格局"].append("🥇 核心區見天同化祿，自帶療癒氣場 (+30分)")
             else: sub_scores["格局"] += 15; process_logs["格局"].append("🥇 命盤藏天同化祿，具備隱藏的無害親和基因 (+15分)")
@@ -896,9 +889,7 @@ def calculate_birth_opportunity(html_content):
         if "天梁" in p_text and "科" in p_text:
             if is_core: sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 核心區見天梁化科，逢凶化吉長輩庇蔭 (+20分)")
             else: sub_scores["格局"] += 10; process_logs["格局"].append("🛡️ 命盤藏天梁化科，自帶隱形的逢凶化吉基因 (+10分)")
-    # ==========================================
 
-    # 3. 基礎行動星判定 (以核心活躍區 sf_text 為主)
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
@@ -909,54 +900,59 @@ def calculate_birth_opportunity(html_content):
                 sub_scores["格局"] += 0
                 process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+0分)")
 
-    # 4. 火鈴貪爆發魅力彩蛋 (聚焦三方四正)
-        # 4. 火鈴貪爆發魅力彩蛋 (這段維持你的原樣)
-    has_tan_opp = "貪狼" in sf_text
-    has_huo_opp = "火星" in sf_text
-    has_ling_opp = "鈴星" in sf_text
-    has_lu_opp = "祿" in sf_text or "祿存" in sf_text
-    has_kongjie_opp = "地空" in sf_text or "地劫" in sf_text
+    # ----------------------------------------
+    # 🔺 同步套用：本命盤火鈴貪爆發與空劫黑洞空間定位
+    # ----------------------------------------
+    active_pairs = [
+        (ming, qian, "本命命宮"),
+        (cai, fu, "本命財帛"),
+        (guan, fuqi, "本命事業"),
+        (qian, ming, "本命遷移")
+    ]
     
-    # 🔺 新增一個標籤，紀錄是否已經觸發了核彈級扣分
-    is_huotan_boom = has_tan_opp and (has_huo_opp or has_ling_opp) and has_kongjie_opp
+    is_huotan_boom = False
+    is_huotan_lu = False
+    is_huotan_basic = False
+    
+    for p_text, opp_text, p_name in active_pairs:
+        if "貪狼" in p_text and ("火星" in p_text or "鈴星" in p_text):
+            if "地空" in p_text or "地劫" in p_text or "地空" in opp_text or "地劫" in opp_text:
+                is_huotan_boom = True
+            elif "祿" in sf_text or "祿存" in sf_text:
+                is_huotan_lu = True
+            else:
+                is_huotan_basic = True
 
-    if has_tan_opp and (has_huo_opp or has_ling_opp):
-        if has_kongjie_opp:
-            sub_scores["格局"] -= 50
-            process_logs["格局"].append("⚠️ 火貪空劫，曇花一現，當心社交圈的突發炎上 (-50分)")
-        elif has_lu_opp:
-            sub_scores["格局"] += 40
-            process_logs["格局"].append("🔥 火鈴貪祿，人氣爆棚，自帶流量的超級發電機 (+40分)")
-        else:
-            sub_scores["格局"] += 15
-            process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
+    if is_huotan_boom:
+        sub_scores["格局"] -= 50
+        process_logs["格局"].append("⚠️ 火貪空劫(同/對宮)，曇花一現，當心社交圈的突發炎上 (-50分)")
+    elif is_huotan_lu:
+        sub_scores["格局"] += 40
+        process_logs["格局"].append("🔥 火鈴貪祿同宮發動，人氣爆棚，自帶流量的超級發電機 (+40分)")
+    elif is_huotan_basic:
+        sub_scores["格局"] += 15
+        process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
-    # 🛡️ 5. 社交魅力防護網
     breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20} 
     for star, pts in breaker_stars.items():
         if star in sf_text:
-            # 🔺 終極修復：如果已經被火貪空劫扣過 50 分了，地空與地劫直接豁免，跳過不扣！
             if (star == "地空" or star == "地劫") and is_huotan_boom:
                 continue
-                
             sub_scores["格局"] -= pts
             process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
             
-    # 火星與鈴星的特殊判定：如果「沒有」跟貪狼組隊，才視為破壞星扣分
-    if has_huo_opp and not has_tan_opp:
+    has_tan_sf = "貪狼" in sf_text
+    if "火星" in sf_text and not has_tan_sf:
         sub_scores["格局"] -= 10
         process_logs["格局"].append("🔥 `火星` 攪局，情緒急躁，容易瞬間破壞人緣氣場 (-10分)")
-    if has_ling_opp and not has_tan_opp:
+    if "鈴星" in sf_text and not has_tan_sf:
         sub_scores["格局"] -= 10
         process_logs["格局"].append("🔔 `鈴星` 攪局，陰鬱不滿，讓人覺得難以親近與溝通 (-10分)")
 
     if "巨門" in sf_text and "忌" in sf_text:
         sub_scores["格局"] -= 20
         process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
-        
-    # ----------------------------------------
 
-    # 模組 2：社交 (活躍度與人際內耗)
     peach_count = sum(social_text.count(s) for s in ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"])
     if peach_count > 0: 
         sub_scores["社交"] += (peach_count * 5)
@@ -988,7 +984,6 @@ def calculate_birth_opportunity(html_content):
             sub_scores["社交"] -= pts
             process_logs["社交"].append(f"🏠 `{star}` 發威，性格傾向內收或孤獨 (-{pts}分)")
     
-    # 模組 3：貴人
     if "紫微" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("👑 本命遷移見紫微 (+20分)")
     if "天府" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("🏰 本命遷移見天府 (+20分)")
     for star, pts in {"天魁": 10, "天鉞": 10, "左輔": 10, "右弼": 10}.items():
@@ -1000,7 +995,6 @@ def calculate_birth_opportunity(html_content):
     if ("左輔" in fumu and "右弼" in xiong) or ("左輔" in xiong and "右弼" in fumu) or ("天魁" in fumu and "天鉞" in xiong) or ("天魁" in xiong and "天鉞" in fumu):
         sub_scores["貴人"] += 20; process_logs["貴人"].append("🧱 左右/魁鉞夾命 (+20分)")
         
-    # 🧱 夾宮貴人判定：夾遷移宮 (交友 + 疾厄)
     has_zuoyou_jia_qian = ("左輔" in jiao and "右弼" in jie) or ("左輔" in jie and "右弼" in jiao)
     has_kuiyue_jia_qian = ("天魁" in jiao and "天鉞" in jie) or ("天魁" in jie and "天鉞" in jiao)
     if has_zuoyou_jia_qian or has_kuiyue_jia_qian:
@@ -1034,9 +1028,6 @@ if st.session_state.birth_chart:
                 for log in b_opp_logs[cat]:
                     st.caption(log)
     
-     #隱藏網站抓取到的本命盤，收合於擴展區塊內
-    #with st.expander("🗺️ 點此展開查看原始本命盤表格"):
-        #components.html(st.session_state.birth_chart, height=550, scrolling=True)
 else:
     st.info("請先點擊左側「1️⃣ 開始排本命盤」。")
 
@@ -1201,27 +1192,5 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
                     
             st.markdown("---")
 
-# 顯示四個流轉盤
-#if hasattr(st.session_state, 'transit_charts') and st.session_state.transit_charts:
-#    st.markdown("---")
-#    with st.expander("🗺️ 點此展開查看流年/流月/流日/流時真實命盤表格"):
-#        col1, col2 = st.columns(2)
-#        col3, col4 = st.columns(2)
-        
-#        grid_mapping = [
-#            ("流年盤", col1),
-#            ("流月盤", col2),
-#            ("流日盤", col3),
-#            ("流時盤", col4)
-#        ]
-        
-#        for title, col in grid_mapping:
-#            with col:
-#                st.markdown(f"<h4 style='text-align: center;'>{title}</h4>", unsafe_allow_html=True)
-#                if title in st.session_state.transit_charts:
-#                    components.html(st.session_state.transit_charts[title], height=500, scrolling=True)
-#                else:
-#                    st.warning(f"無法取得{title}資料")
-                    
 elif st.session_state.step1_done:
     st.info("本命盤已就緒！請設定上方流轉日期後，點擊「🚀 一鍵取得四重流轉盤」。")
