@@ -432,13 +432,14 @@ def calculate_opportunity_score(html_content, mode):
     if ming_pos == -1: return base_score, sub_scores, process_logs
     # ---------------------------
 
-    ming  = cell_texts[clockwise_indices[ming_pos]]
-    fumu  = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]  
-    guan  = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]  
-    jiao  = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]  
-    qian  = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]  
-    cai   = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]  
-    xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]] 
+        ming = cell_texts[clockwise_indices[ming_pos]]
+    fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
+    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]
+    jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
+    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]
+    jie  = cell_texts[clockwise_indices[(ming_pos + 7) % 12]]  # 🔺 新增：疾厄宮 (夾遷移用)
+    cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]
+    xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]]
     
     sf_text = ming + cai + guan + qian 
     social_text = ming + fumu + guan + jiao + qian 
@@ -605,6 +606,13 @@ def calculate_opportunity_score(html_content, mode):
     if has_zuoyou_jia or has_kuiyue_jia:
         sub_scores["貴人"] += 20
         process_logs["貴人"].append("🧱 左右或魁鉞夾命，貴人暗中護體 (+20分)")
+        
+    # 🧱 夾宮貴人判定：夾遷移宮 (交友 + 疾厄)
+    has_zuoyou_jia_qian = ("左輔" in jiao and "右弼" in jie) or ("左輔" in jie and "右弼" in jiao)
+    has_kuiyue_jia_qian = ("天魁" in jiao and "天鉞" in jie) or ("天魁" in jie and "天鉞" in jiao)
+    if has_zuoyou_jia_qian or has_kuiyue_jia_qian:
+        sub_scores["貴人"] += 20
+        process_logs["貴人"].append("🧱 左右/魁鉞夾遷移，出外發展暗藏強大助力 (+20分)")
 
     total_score = base_score + sub_scores["格局"] + sub_scores["社交"] + sub_scores["貴人"]
     return max(0, min(200, total_score)), sub_scores, process_logs
@@ -786,10 +794,14 @@ def calculate_birth_opportunity(html_content):
     if ming_pos == -1: return base_score, sub_scores, process_logs
     # ---------------------------
 
-    ming = cell_texts[clockwise_indices[ming_pos]]; fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
-    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]; jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
-    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]; cai = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]
-    xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]] 
+    ming = cell_texts[clockwise_indices[ming_pos]]
+    fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
+    guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]
+    jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
+    qian = cell_texts[clockwise_indices[(ming_pos + 6) % 12]]
+    jie  = cell_texts[clockwise_indices[(ming_pos + 7) % 12]]  # 🔺 新增：疾厄宮 (夾遷移用)
+    cai  = cell_texts[clockwise_indices[(ming_pos + 8) % 12]]
+    xiong = cell_texts[clockwise_indices[(ming_pos + 11) % 12]]
     
     sf_text = ming + cai + guan + qian; social_text = ming + fumu + guan + jiao + qian 
     
@@ -959,6 +971,13 @@ def calculate_birth_opportunity(html_content):
         if "紫微" in p_text: sub_scores["貴人"] += 5; process_logs["貴人"].append(f"🤝 `{p_name}` 見領導星紫微 (+5分)")
     if ("左輔" in fumu and "右弼" in xiong) or ("左輔" in xiong and "右弼" in fumu) or ("天魁" in fumu and "天鉞" in xiong) or ("天魁" in xiong and "天鉞" in fumu):
         sub_scores["貴人"] += 20; process_logs["貴人"].append("🧱 左右/魁鉞夾命 (+20分)")
+        
+    # 🧱 夾宮貴人判定：夾遷移宮 (交友 + 疾厄)
+    has_zuoyou_jia_qian = ("左輔" in jiao and "右弼" in jie) or ("左輔" in jie and "右弼" in jiao)
+    has_kuiyue_jia_qian = ("天魁" in jiao and "天鉞" in jie) or ("天魁" in jie and "天鉞" in jiao)
+    if has_zuoyou_jia_qian or has_kuiyue_jia_qian:
+        sub_scores["貴人"] += 20
+        process_logs["貴人"].append("🧱 左右/魁鉞夾遷移，出外發展暗藏強大助力 (+20分)")
 
     return max(0, base_score + sub_scores["格局"] + sub_scores["社交"] + sub_scores["貴人"]), sub_scores, process_logs
     
