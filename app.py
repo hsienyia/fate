@@ -505,6 +505,9 @@ def calculate_opportunity_score(html_content, mode):
     has_ling_opp = "鈴星" in sf_text
     has_lu_opp = "祿" in sf_text or "祿存" in sf_text
     has_kongjie_opp = "地空" in sf_text or "地劫" in sf_text
+    
+    # 🔺 新增一個標籤，紀錄是否已經觸發了核彈級扣分
+    is_huotan_boom = has_tan_opp and (has_huo_opp or has_ling_opp) and has_kongjie_opp
 
     if has_tan_opp and (has_huo_opp or has_ling_opp):
         if has_kongjie_opp:
@@ -517,13 +520,14 @@ def calculate_opportunity_score(html_content, mode):
             sub_scores["格局"] += 15
             process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
-    # ==========================================
-    # 🛡️ 模組 1：社交魅力防護網 (針對格局層面)
-    # ==========================================
-    # 拔除火鈴，另外獨立判斷是否擁有「火鈴貪豁免權」
-    breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20}
+    # 🛡️ 5. 社交魅力防護網
+    breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20} 
     for star, pts in breaker_stars.items():
         if star in sf_text:
+            # 🔺 終極修復：如果已經被火貪空劫扣過 50 分了，地空與地劫直接豁免，跳過不扣！
+            if (star == "地空" or star == "地劫") and is_huotan_boom:
+                continue
+                
             sub_scores["格局"] -= pts
             process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
             
@@ -534,11 +538,10 @@ def calculate_opportunity_score(html_content, mode):
     if has_ling_opp and not has_tan_opp:
         sub_scores["格局"] -= 10
         process_logs["格局"].append("🔔 `鈴星` 攪局，陰鬱不滿，讓人覺得難以親近與溝通 (-10分)")
-            
+
     if "巨門" in sf_text and "忌" in sf_text:
         sub_scores["格局"] -= 20
         process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
-
 
     # ==========================================
     # 模組 2：社交 (活躍度與人際內耗)
@@ -891,11 +894,15 @@ def calculate_birth_opportunity(html_content):
                 process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+0分)")
 
     # 4. 火鈴貪爆發魅力彩蛋 (聚焦三方四正)
+        # 4. 火鈴貪爆發魅力彩蛋 (這段維持你的原樣)
     has_tan_opp = "貪狼" in sf_text
     has_huo_opp = "火星" in sf_text
     has_ling_opp = "鈴星" in sf_text
     has_lu_opp = "祿" in sf_text or "祿存" in sf_text
     has_kongjie_opp = "地空" in sf_text or "地劫" in sf_text
+    
+    # 🔺 新增一個標籤，紀錄是否已經觸發了核彈級扣分
+    is_huotan_boom = has_tan_opp and (has_huo_opp or has_ling_opp) and has_kongjie_opp
 
     if has_tan_opp and (has_huo_opp or has_ling_opp):
         if has_kongjie_opp:
@@ -908,10 +915,14 @@ def calculate_birth_opportunity(html_content):
             sub_scores["格局"] += 15
             process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
-    # 🛡️ 5. 社交魅力防護網 (針對格局層面的干擾源進行扣分)
+    # 🛡️ 5. 社交魅力防護網
     breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20} 
     for star, pts in breaker_stars.items():
         if star in sf_text:
+            # 🔺 終極修復：如果已經被火貪空劫扣過 50 分了，地空與地劫直接豁免，跳過不扣！
+            if (star == "地空" or star == "地劫") and is_huotan_boom:
+                continue
+                
             sub_scores["格局"] -= pts
             process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
             
@@ -926,6 +937,7 @@ def calculate_birth_opportunity(html_content):
     if "巨門" in sf_text and "忌" in sf_text:
         sub_scores["格局"] -= 20
         process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
+        
     # ----------------------------------------
 
     # 模組 2：社交 (活躍度與人際內耗)
