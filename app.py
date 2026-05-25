@@ -616,9 +616,24 @@ def calculate_opportunity_score(html_content, mode):
     if has_zuoyou_jia_qian or has_kuiyue_jia_qian:
         sub_scores["貴人"] += 20
         process_logs["貴人"].append("🧱 左右/魁鉞夾遷移，出外發展暗藏強大助力 (+20分)")
-
-    total_score = base_score + sub_scores["格局"] + sub_scores["社交"] + sub_scores["貴人"]
-    return max(0, min(200, total_score)), sub_scores, process_logs
+        
+def get_total_opportunity_index(charts_dict):
+    if not charts_dict or len(charts_dict) < 4:
+        return 0, {}, {}, {}
+        
+    scores = {}
+    sub_scores_dict = {}
+    logs = {}
+    
+    for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
+        s, sub_s, l = calculate_opportunity_score(charts_dict.get(mode, ""), mode)
+        scores[mode] = s
+        sub_scores_dict[mode] = sub_s
+        logs[mode] = l
+    
+    # 這裡維持你設定的精準權重：流年10%, 流月10%, 流日40%, 流時40%
+    total = (scores["流年盤"] * 0.1) + (scores["流月盤"] * 0.1) + (scores["流日盤"] * 0.4) + (scores["流時盤"] * 0.4)
+    return round(total, 1), scores, sub_scores_dict, logs
 # ==========================================
 # 引擎區塊 3：本命盤基礎底蘊 (財運/機運)
 # ==========================================
