@@ -444,43 +444,51 @@ def calculate_opportunity_score(html_content, mode):
     sf_text = ming + cai + guan + qian 
     social_text = ming + fumu + guan + jiao + qian 
 
+    # 🔺 建立一個陣列代表活躍區的獨立宮位 (恢復宮位牆壁)
+    active_cells = [ming, cai, guan, qian]
+
     # ==========================================
-    # 模組 1：流轉盤格局與魅力榜 (嚴格鎖定核心活躍區 sf_text)
+    # 模組 1：流轉盤格局與魅力榜 (嚴格鎖定核心活躍區)
     # ==========================================
+    
+    # 🏆 1. 跨宮位核心大格局 (這個看整體三方四正，所以維持用 sf_text)
     if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]):
         sub_scores["格局"] += 25
         process_logs["格局"].append("✨ 活躍區觸發「機月同梁」，團隊協作效率大增 (+25分)")
 
-    if "太陽" in sf_text and "太陰" in sf_text:
+    # 🌟 2. 雙星同宮 (必須在「同一個宮位 p」內同時出現)
+    if any("太陽" in p and "太陰" in p for p in active_cells):
         sub_scores["格局"] += 28; process_logs["格局"].append("☀️🌙 活躍區見日月同宮，磁場和諧吸引好機遇 (+28分)")
-    if "天機" in sf_text and "太陰" in sf_text:
+    if any("天機" in p and "太陰" in p for p in active_cells):
         sub_scores["格局"] += 25; process_logs["格局"].append("🧠 活躍區見機陰同宮，心思細膩社交進退得宜 (+25分)")
-    if "廉貞" in sf_text and "貪狼" in sf_text:
+    if any("廉貞" in p and "貪狼" in p for p in active_cells):
         sub_scores["格局"] += 18; process_logs["格局"].append("🏅 活躍區見廉貪同宮，風情萬種擄獲異性目光 (+18分)")
-    if "紫微" in sf_text and "貪狼" in sf_text:
+    if any("紫微" in p and "貪狼" in p for p in active_cells):
         sub_scores["格局"] += 14; process_logs["格局"].append("🏅 活躍區見紫貪同宮，高貴得體魅力氣場四溢 (+14分)")
-    if "天機" in sf_text and "巨門" in sf_text:
+    if any("天機" in p and "巨門" in p for p in active_cells):
         sub_scores["格局"] += 10; process_logs["格局"].append("💬 活躍區見機巨同宮，話題豐富適合知性交流 (+10分)")
 
-    if "天同" in sf_text and "祿" in sf_text:
+    # 🌟 3. 四化專屬爆發 (星曜與四化必須在「同一個宮位 p」內同時出現)
+    if any("天同" in p and "祿" in p for p in active_cells):
         sub_scores["格局"] += 30; process_logs["格局"].append("🥇 活躍區見天同化祿，當下自帶極強療癒親和力 (+30分)")
-    if "紫微" in sf_text and "科" in sf_text:
+    if any("紫微" in p and "科" in p for p in active_cells):
         sub_scores["格局"] += 30; process_logs["格局"].append("👑 活躍區見紫微化科，帝星閃耀，此時威望極高 (+30分)")
-    if "巨門" in sf_text and "祿" in sf_text:
+    if any("巨門" in p and "祿" in p for p in active_cells):
         sub_scores["格局"] += 25; process_logs["格局"].append("💬 活躍區見巨門化祿，說服力爆表，極利公關談判 (+25分)")
-    if "太陰" in sf_text and "科" in sf_text:
+    if any("太陰" in p and "科" in p for p in active_cells):
         sub_scores["格局"] += 25; process_logs["格局"].append("🌕 活躍區見太陰化科，優雅內斂高冷氣質 (+25分)")
-    if "太陽" in sf_text and "科" in sf_text:
+    if any("太陽" in p and "科" in p for p in active_cells):
         sub_scores["格局"] += 25; process_logs["格局"].append("☀️ 活躍區見太陽化科，行走暖陽談吐優雅 (+25分)")
-    if "貪狼" in sf_text and "祿" in sf_text:
+    if any("貪狼" in p and "祿" in p for p in active_cells):
         sub_scores["格局"] += 22; process_logs["格局"].append("🏅 活躍區見貪狼化祿，情商天花板，幽默感大爆發 (+22分)")
-    if "太陽" in sf_text and "權" in sf_text:
+    if any("太陽" in p and "權" in p for p in active_cells):
         sub_scores["格局"] += 20; process_logs["格局"].append("🏅 活躍區見太陽化權，霸氣能幹，掌控全局 (+20分)")
-    if "天同" in sf_text and "權" in sf_text:
+    if any("天同" in p and "權" in p for p in active_cells):
         sub_scores["格局"] += 20; process_logs["格局"].append("🥊 活躍區見天同化權，外柔內剛，談判手腕極佳 (+20分)")
-    if "天梁" in sf_text and "科" in sf_text:
+    if any("天梁" in p and "科" in p for p in active_cells):
         sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 活躍區見天梁化科，逢凶化吉，易得長輩救援 (+20分)")
 
+    # 🚶‍♂️ 4. 基礎行動星判定 (這個看整體氣場，維持 sf_text 即可)
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
