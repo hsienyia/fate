@@ -402,7 +402,7 @@ def calculate_opportunity_score(html_content, mode):
     
     sub_scores = {"格局": 0, "社交": 0, "貴人": 0}
     process_logs = {"格局": [], "社交": [], "貴人": []}
-    process_logs["格局"].append("**✨ 機運起算分: 30 分 (嚴格校準版)**") 
+    process_logs["格局"].append(f"**✨ {mode}機運起算分: 30 分**") 
     
     if not html_content: return base_score, sub_scores, process_logs
     
@@ -443,56 +443,62 @@ def calculate_opportunity_score(html_content, mode):
     sf_text = ming + cai + guan + qian 
     social_text = ming + fumu + guan + jiao + qian 
 
-    # 模組 1：格局與魅力榜
-    # 🏆 終極人見人愛排行榜 (最高分群)
+    # ==========================================
+    # 模組 1：流轉盤格局與魅力榜 (嚴格鎖定核心活躍區 sf_text)
+    # ==========================================
+    
+    # 🏆 1. 跨宮位核心大格局
     if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]):
         sub_scores["格局"] += 25
-        process_logs["格局"].append("✨ 三方觸發「機月同梁」，團隊協作效率大增 (+25分)")
-        
-    if "天同" in sf_text and "祿" in sf_text:
-        sub_scores["格局"] += 30
-        process_logs["格局"].append("🥇 天同化祿，自帶療癒氣場，讓人放下防備 (+30分)")
-    if "太陽" in sf_text and "太陰" in sf_text:
-        sub_scores["格局"] += 28
-        process_logs["格局"].append("☀️🌙 三方日月並明，磁場和諧吸引好機遇 (+28分)")
-    if "天機" in sf_text and "太陰" in sf_text:
-        sub_scores["格局"] += 25
-        process_logs["格局"].append("🧠 天機太陰，心思細膩，社交進退得宜 (+25分)")
-    if "貪狼" in sf_text and "祿" in sf_text:
-        sub_scores["格局"] += 22
-        process_logs["格局"].append("🏅 貪狼化祿，情商天花板，自帶幽默魅力 (+22分)")
-    if "太陽" in sf_text and "科" in sf_text:
-        sub_scores["格局"] += 20
-        process_logs["格局"].append("☀️ 太陽化科，行走暖陽，談吐優雅備受讚譽 (+20分)")
-        
-    # 🏆 終極人見人愛排行榜 (進階分群)
-    if "廉貞" in sf_text and "貪狼" in sf_text:
-        sub_scores["格局"] += 18
-        process_logs["格局"].append("🏅 廉貞貪狼：風情萬種，擄獲異性目光 (+18分)")
-    if "太陰" in sf_text and "科" in sf_text:
-        sub_scores["格局"] += 16
-        process_logs["格局"].append("🌕 太陰化科大加分！氣質迷人吸引貴人 (+16分)")
-    if "紫微" in sf_text and "貪狼" in sf_text:
-        sub_scores["格局"] += 14
-        process_logs["格局"].append("🏅 紫微貪狼：高貴得體，魅力氣場四溢 (+14分)")
-    if "太陽" in sf_text and "權" in sf_text:
-        sub_scores["格局"] += 12
-        process_logs["格局"].append("🏅 太陽化權：霸氣能幹，讓人敬畏崇拜 (+12分)")
-    if "天機" in sf_text and "巨門" in sf_text:
-        sub_scores["格局"] += 10
-        process_logs["格局"].append("💬 天機巨門，話題豐富，適合知性交流 (+10分)")
+        process_logs["格局"].append("✨ 活躍區觸發「機月同梁」，團隊協作效率大增 (+25分)")
 
-    # 基礎行動星判定
+    # 🌟 2. 雙星同宮 (僅限當下活躍區)
+    if "太陽" in sf_text and "太陰" in sf_text:
+        sub_scores["格局"] += 28; process_logs["格局"].append("☀️🌙 活躍區見日月同宮，磁場和諧吸引好機遇 (+28分)")
+    if "天機" in sf_text and "太陰" in sf_text:
+        sub_scores["格局"] += 25; process_logs["格局"].append("🧠 活躍區見機陰同宮，心思細膩社交進退得宜 (+25分)")
+    if "廉貞" in sf_text and "貪狼" in sf_text:
+        sub_scores["格局"] += 18; process_logs["格局"].append("🏅 活躍區見廉貪同宮，風情萬種擄獲異性目光 (+18分)")
+    if "紫微" in sf_text and "貪狼" in sf_text:
+        sub_scores["格局"] += 14; process_logs["格局"].append("🏅 活躍區見紫貪同宮，高貴得體魅力氣場四溢 (+14分)")
+    if "天機" in sf_text and "巨門" in sf_text:
+        sub_scores["格局"] += 10; process_logs["格局"].append("💬 活躍區見機巨同宮，話題豐富適合知性交流 (+10分)")
+
+    # 🌟 3. 四化專屬爆發 (僅限當下活躍區)
+    if "天同" in sf_text and "祿" in sf_text:
+        sub_scores["格局"] += 30; process_logs["格局"].append("🥇 活躍區見天同化祿，當下自帶極強療癒親和力 (+30分)")
+    if "紫微" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 30; process_logs["格局"].append("👑 活躍區見紫微化科，帝星閃耀，此時威望極高 (+30分)")
+    if "巨門" in sf_text and "祿" in sf_text:
+        sub_scores["格局"] += 25; process_logs["格局"].append("💬 活躍區見巨門化祿，說服力爆表，極利公關談判 (+25分)")
+    if "太陰" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 25; process_logs["格局"].append("🌕 活躍區見太陰化科，優雅內斂高冷氣質 (+25分)")
+    if "太陽" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 25; process_logs["格局"].append("☀️ 活躍區見太陽化科，行走暖陽談吐優雅 (+25分)")
+    if "貪狼" in sf_text and "祿" in sf_text:
+        sub_scores["格局"] += 22; process_logs["格局"].append("🏅 活躍區見貪狼化祿，情商天花板，幽默感大爆發 (+22分)")
+    if "太陽" in sf_text and "權" in sf_text:
+        sub_scores["格局"] += 20; process_logs["格局"].append("🏅 活躍區見太陽化權，霸氣能幹，掌控全局 (+20分)")
+    if "天同" in sf_text and "權" in sf_text:
+        sub_scores["格局"] += 20; process_logs["格局"].append("🥊 活躍區見天同化權，外柔內剛，談判手腕極佳 (+20分)")
+    if "天梁" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 活躍區見天梁化科，逢凶化吉，易得長輩救援 (+20分)")
+
+    # 🚶‍♂️ 4. 基礎行動星判定 (廟旺)
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
             if brightness >= 1.1: 
                 sub_scores["格局"] += 5
-                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (廟旺)，能量爆發 (+5分)")
+                process_logs["格局"].append(f"🚶‍♂️ 活躍區見 `{star}` (廟旺)，能量順暢 (+5分)")
             else:
                 sub_scores["格局"] += 2
-                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+2分)")
+                process_logs["格局"].append(f"🚶‍♂️ 活躍區見 `{star}` (平陷)，能量平平 (+2分)")
 
+
+    # ==========================================
+    # 🔥 火貪/鈴貪 爆發魅力彩蛋
+    # ==========================================
     has_tan_opp = "貪狼" in sf_text
     has_huo_opp = "火星" in sf_text
     has_ling_opp = "鈴星" in sf_text
@@ -510,19 +516,32 @@ def calculate_opportunity_score(html_content, mode):
             sub_scores["格局"] += 15
             process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
-    # 🛡️ 社交魅力防護網 (針對格局層面的干擾源進行扣分)
-    breaker_stars = {"擎羊": 15, "陀羅": 15, "火星": 10, "鈴星": 10, "地空": 20, "地劫": 20}
+    # ==========================================
+    # 🛡️ 模組 1：社交魅力防護網 (針對格局層面)
+    # ==========================================
+    # 拔除火鈴，另外獨立判斷是否擁有「火鈴貪豁免權」
+    breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20}
     for star, pts in breaker_stars.items():
         if star in sf_text:
             sub_scores["格局"] -= pts
             process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
+            
+    # 火星與鈴星的特殊判定：如果「沒有」跟貪狼組隊，才視為破壞星扣分
+    if has_huo_opp and not has_tan_opp:
+        sub_scores["格局"] -= 10
+        process_logs["格局"].append("🔥 `火星` 攪局，情緒急躁，容易瞬間破壞人緣氣場 (-10分)")
+    if has_ling_opp and not has_tan_opp:
+        sub_scores["格局"] -= 10
+        process_logs["格局"].append("🔔 `鈴星` 攪局，陰鬱不滿，讓人覺得難以親近與溝通 (-10分)")
             
     if "巨門" in sf_text and "忌" in sf_text:
         sub_scores["格局"] -= 20
         process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
 
 
-    # 模組 2：社交
+    # ==========================================
+    # 模組 2：社交 (活躍度與人際內耗)
+    # ==========================================
     peach_stars = ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"]
     peach_count = sum(social_text.count(s) for s in peach_stars)
     if peach_count > 0:
@@ -549,11 +568,12 @@ def calculate_opportunity_score(html_content, mode):
                 sub_scores["社交"] += 15
                 process_logs["社交"].append(f"🐎 `{p_name}` 見天馬，鼓勵外出 (+15分)")
 
-    isolating_stars = {"孤辰": 15, "寡宿": 15, "地空": 20, "地劫": 20, "鈴星": 15, "陀羅": 15}
+    # 修正雙重扣分：這裡只專注於扣「性格孤立星」，將地空、地劫、鈴星、陀羅交由模組 1 統一處理
+    isolating_stars = {"孤辰": 15, "寡宿": 15}
     for star, pts in isolating_stars.items():
         if star in social_text:
             sub_scores["社交"] -= pts
-            process_logs["社交"].append(f"🏠 `{star}` 發威，傾向內耗或孤獨 (-{pts}分)")
+            process_logs["社交"].append(f"🏠 `{star}` 發威，性格傾向內收或孤獨 (-{pts}分)")
 
     # 模組 3：貴人
     if "紫微" in qian:
@@ -588,24 +608,6 @@ def calculate_opportunity_score(html_content, mode):
 
     total_score = base_score + sub_scores["格局"] + sub_scores["社交"] + sub_scores["貴人"]
     return max(0, min(200, total_score)), sub_scores, process_logs
-
-def get_total_opportunity_index(charts_dict):
-    if not charts_dict or len(charts_dict) < 4:
-        return 0, {}, {}, {}
-        
-    scores = {}
-    sub_scores_dict = {}
-    logs = {}
-    
-    for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
-        s, sub_s, l = calculate_opportunity_score(charts_dict.get(mode, ""), mode)
-        scores[mode] = s
-        sub_scores_dict[mode] = sub_s
-        logs[mode] = l
-    
-    total = (scores["流年盤"] * 0.1) + (scores["流月盤"] * 0.1) + (scores["流日盤"] * 0.4) + (scores["流時盤"] * 0.4)
-    return round(total, 1), scores, sub_scores_dict, logs
-
 # ==========================================
 # 引擎區塊 3：本命盤基礎底蘊 (財運/機運)
 # ==========================================
@@ -655,6 +657,42 @@ def calculate_birth_wealth(html_content):
     palaces_to_check = [(ming, True, "本命命宮"), (qian, True, "本命遷移"), (fu, True, "本命福德"), (cai, False, "本命財帛"), (guan, False, "本命事業")]
     score = 60
     process_log = ["**🔹 本命財運起算分: 60 分**"]
+
+    # 🔥 全盤掃描：本命 12 宮專屬四化彩蛋 (底蘊基因)
+    # ==========================================
+    core_wealth_cells = [ming, fu, guan, qian, cai]
+    
+    for p_text in cell_texts:
+        is_core = p_text in core_wealth_cells
+        
+        # 武曲化祿
+        if "武曲" in p_text and "祿" in p_text:
+            if is_core:
+                score += 30; process_log.append("🌟 核心區見武曲化祿，實打實的無敵本命金庫 (+30分)")
+            else:
+                score += 15; process_log.append("🌟 命盤藏武曲化祿，具備隱藏暴富底蘊，流轉引爆即發財 (+15分)")
+                
+        # 破軍化祿
+        if "破軍" in p_text and "祿" in p_text:
+            if is_core:
+                score += 25; process_log.append("🌪️ 核心區見破軍化祿，破繭而出，亂世抄底的暴利推手 (+25分)")
+            else:
+                score += 10; process_log.append("🌪️ 命盤藏破軍化祿，具備逆轉暴利的隱藏基因 (+10分)")
+                
+        # 天機化祿
+        if "天機" in p_text and "祿" in p_text:
+            if is_core:
+                score += 20; process_log.append("🧠 核心區見天機化祿，智謀生財，靈活穿梭盤勢的波段神童 (+20分)")
+            else:
+                score += 10; process_log.append("🧠 命盤藏天機化祿，對數字跳動具備天生敏銳度 (+10分)")
+                
+        # 武曲化權
+        if "武曲" in p_text and "權" in p_text:
+            if is_core:
+                score += 20; process_log.append("⚖️ 核心區見武曲化權，鐵血紀律，對資金擁有絕對掌控霸氣 (+20分)")
+            else:
+                score += 10; process_log.append("⚖️ 命盤藏武曲化權，天生自帶嚴謹的資金控管基因 (+10分)")
+    # ==========================================
     
     for p_text, is_mqf, p_name in palaces_to_check:
         lu_count = len(re.findall(r'祿', p_text)); quan_count = len(re.findall(r'權', p_text)); ke_count = len(re.findall(r'科', p_text))
@@ -756,55 +794,80 @@ def calculate_birth_opportunity(html_content):
     sf_text = ming + cai + guan + qian; social_text = ming + fumu + guan + jiao + qian 
     
     # 模組 1：格局與魅力榜
-    # 🏆 終極人見人愛排行榜 (最高分群)
+    # 🏆 1. 跨宮位核心大格局 (需多星連動，僅限三方四正)
     if all(s in sf_text for s in ["天機", "太陰", "天同", "天梁"]):
         sub_scores["格局"] += 25
-        process_logs["格局"].append("✨ 三方觸發「機月同梁」，團隊協作效率大增 (+25分)")
-        
-    if "天同" in sf_text and "祿" in sf_text:
-        sub_scores["格局"] += 30
-        process_logs["格局"].append("🥇 天同化祿，自帶療癒氣場，讓人放下防備 (+30分)")
-    if "太陽" in sf_text and "太陰" in sf_text:
-        sub_scores["格局"] += 28
-        process_logs["格局"].append("☀️🌙 三方日月並明，磁場和諧吸引好機遇 (+28分)")
-    if "天機" in sf_text and "太陰" in sf_text:
-        sub_scores["格局"] += 25
-        process_logs["格局"].append("🧠 天機太陰，心思細膩，社交進退得宜 (+25分)")
-    if "貪狼" in sf_text and "祿" in sf_text:
-        sub_scores["格局"] += 22
-        process_logs["格局"].append("🏅 貪狼化祿，情商天花板，自帶幽默魅力 (+22分)")
-    if "太陽" in sf_text and "科" in sf_text:
-        sub_scores["格局"] += 20
-        process_logs["格局"].append("☀️ 太陽化科，行走暖陽，談吐優雅備受讚譽 (+20分)")
-        
-    # 🏆 終極人見人愛排行榜 (進階分群)
-    if "廉貞" in sf_text and "貪狼" in sf_text:
-        sub_scores["格局"] += 18
-        process_logs["格局"].append("🏅 廉貞貪狼：風情萬種，擄獲異性目光 (+18分)")
-    if "太陰" in sf_text and "科" in sf_text:
-        sub_scores["格局"] += 16
-        process_logs["格局"].append("🌕 太陰化科大加分！氣質迷人吸引貴人 (+16分)")
-    if "紫微" in sf_text and "貪狼" in sf_text:
-        sub_scores["格局"] += 14
-        process_logs["格局"].append("🏅 紫微貪狼：高貴得體，魅力氣場四溢 (+14分)")
-    if "太陽" in sf_text and "權" in sf_text:
-        sub_scores["格局"] += 12
-        process_logs["格局"].append("🏅 太陽化權：霸氣能幹，讓人敬畏崇拜 (+12分)")
-    if "天機" in sf_text and "巨門" in sf_text:
-        sub_scores["格局"] += 10
-        process_logs["格局"].append("💬 天機巨門，話題豐富，適合知性交流 (+10分)")
+        process_logs["格局"].append("✨ 核心三方觸發「機月同梁」，團隊協作效率大增 (+25分)")
 
-    # 🕊️ 本命專屬四化機運彩蛋
-    if "紫微" in sf_text and "科" in sf_text:
-        sub_scores["格局"] += 30; process_logs["格局"].append("👑 紫微化科，帝星閃耀，自帶頂級威望與高端貴人圈 (+30分)")
-    if "巨門" in sf_text and "祿" in sf_text:
-        sub_scores["格局"] += 25; process_logs["格局"].append("💬 巨門化祿，開口見金，靠三寸不爛之舌收服人心 (+25分)")
-    if "天梁" in sf_text and "科" in sf_text:
-        sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 天梁化科，逢凶化吉，永遠有德高望重的長輩庇蔭 (+20分)")
-    if "天同" in sf_text and "權" in sf_text:
-        sub_scores["格局"] += 20; process_logs["格局"].append("🥊 天同化權，外柔內剛，用最溫柔的笑臉執行最硬的底線 (+20分)")
+    # ==========================================
+    # 🕊️ 全盤掃描：12 宮底蘊基因 (5個純社交核心校準版)
+    # ==========================================
+    # 縮緊防線：僅鎖定 5 大公眾社交與貴人核心宮位
+    core_opp_cells = [ming, guan, qian, fumu, jiao]
+    
+    for p_text in cell_texts:
+        is_core = p_text in core_opp_cells
+        
+        # --- A. 雙星同宮底蘊基因 ---
+        if "太陽" in p_text and "太陰" in p_text:
+            if is_core: sub_scores["格局"] += 28; process_logs["格局"].append("☀️🌙 核心區見日月同宮，磁場和諧吸引好機遇 (+28分)")
+            else: sub_scores["格局"] += 14; process_logs["格局"].append("☀️🌙 命盤藏日月基因，具備隱藏的調和魅力 (+14分)")
+            
+        if "天機" in p_text and "太陰" in p_text:
+            if is_core: sub_scores["格局"] += 25; process_logs["格局"].append("🧠 核心區見機陰同宮，心思細膩社交進退得宜 (+25分)")
+            else: sub_scores["格局"] += 12; process_logs["格局"].append("🧠 命盤藏機陰基因，具備隱藏的細膩人際手腕 (+12分)")
+            
+        if "廉貞" in p_text and "貪狼" in p_text:
+            if is_core: sub_scores["格局"] += 18; process_logs["格局"].append("🏅 核心區見廉貪同宮，風情萬種擄獲異性目光 (+18分)")
+            else: sub_scores["格局"] += 9; process_logs["格局"].append("🏅 命盤藏廉貪基因，具備隱藏的強大發電機魅力 (+9分)")
+            
+        if "紫微" in p_text and "貪狼" in p_text:
+            if is_core: sub_scores["格局"] += 14; process_logs["格局"].append("🏅 核心區見紫貪同宮，高貴得體魅力氣場四溢 (+14分)")
+            else: sub_scores["格局"] += 7; process_logs["格局"].append("🏅 命盤藏紫貪基因，具備隱藏的社交名流氣質 (+7分)")
+            
+        if "天機" in p_text and "巨門" in p_text:
+            if is_core: sub_scores["格局"] += 10; process_logs["格局"].append("💬 核心區見機巨同宮，話題豐富適合知性交流 (+10分)")
+            else: sub_scores["格局"] += 5; process_logs["格局"].append("💬 命盤藏機巨基因，具備隱藏的知性對話能力 (+5分)")
 
-    # 基礎行動星判定
+        # --- B. 四化專屬底蘊基因 ---
+        if "天同" in p_text and "祿" in p_text:
+            if is_core: sub_scores["格局"] += 30; process_logs["格局"].append("🥇 核心區見天同化祿，自帶療癒氣場 (+30分)")
+            else: sub_scores["格局"] += 15; process_logs["格局"].append("🥇 命盤藏天同化祿，具備隱藏的無害親和基因 (+15分)")
+            
+        if "紫微" in p_text and "科" in p_text:
+            if is_core: sub_scores["格局"] += 30; process_logs["格局"].append("👑 核心區見紫微化科，帝星閃耀威望極高 (+30分)")
+            else: sub_scores["格局"] += 15; process_logs["格局"].append("👑 命盤藏紫微化科，自帶隱藏版威望基因 (+15分)")
+            
+        if "巨門" in p_text and "祿" in p_text:
+            if is_core: sub_scores["格局"] += 25; process_logs["格局"].append("💬 核心區見巨門化祿，開口見金收服人心 (+25分)")
+            else: sub_scores["格局"] += 12; process_logs["格局"].append("💬 命盤藏巨門化祿，具備潛在的超級說服力 (+12分)")
+            
+        if "太陰" in p_text and "科" in p_text:
+            if is_core: sub_scores["格局"] += 25; process_logs["格局"].append("🌕 核心區見太陰化科，優雅內斂高冷氣質 (+25分)")
+            else: sub_scores["格局"] += 12; process_logs["格局"].append("🌕 命盤藏太陰化科，具備隱藏的高質感氣質 (+12分)")
+            
+        if "太陽" in p_text and "科" in p_text:
+            if is_core: sub_scores["格局"] += 25; process_logs["格局"].append("☀️ 核心區見太陽化科，行走暖陽談吐優雅 (+25分)")
+            else: sub_scores["格局"] += 12; process_logs["格局"].append("☀️ 命盤藏太陽化科，具備隱藏的名門儒雅基因 (+12分)")
+            
+        if "貪狼" in p_text and "祿" in p_text:
+            if is_core: sub_scores["格局"] += 22; process_logs["格局"].append("🏅 核心區見貪狼化祿，情商天花板幽默魅力 (+22分)")
+            else: sub_scores["格局"] += 11; process_logs["格局"].append("🏅 命盤藏貪狼化祿，具備隱藏的公關王者基因 (+11分)")
+            
+        if "太陽" in p_text and "權" in p_text:
+            if is_core: sub_scores["格局"] += 20; process_logs["格局"].append("🏅 核心區見太陽化權，霸氣能幹讓人敬畏 (+20分)")
+            else: sub_scores["格局"] += 10; process_logs["格局"].append("🏅 命盤藏太陽化權，具備隱藏的領導大氣基因 (+10分)")
+            
+        if "天同" in p_text and "權" in p_text:
+            if is_core: sub_scores["格局"] += 20; process_logs["格局"].append("🥊 核心區見天同化權，外柔內剛柔性手腕 (+20分)")
+            else: sub_scores["格局"] += 10; process_logs["格局"].append("🥊 命盤藏天同化權，具備隱藏的高段柔性手腕 (+10分)")
+            
+        if "天梁" in p_text and "科" in p_text:
+            if is_core: sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 核心區見天梁化科，逢凶化吉長輩庇蔭 (+20分)")
+            else: sub_scores["格局"] += 10; process_logs["格局"].append("🛡️ 命盤藏天梁化科，自帶隱形的逢凶化吉基因 (+10分)")
+    # ==========================================
+
+    # 3. 基礎行動星判定 (以核心活躍區 sf_text 為主)
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
@@ -812,9 +875,10 @@ def calculate_birth_opportunity(html_content):
                 sub_scores["格局"] += 5
                 process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (廟旺)，能量爆發 (+5分)")
             else:
-                sub_scores["格局"] += 2
-                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+2分)")
+                sub_scores["格局"] += 0
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+0分)")
 
+    # 4. 火鈴貪爆發魅力彩蛋 (聚焦三方四正)
     has_tan_opp = "貪狼" in sf_text
     has_huo_opp = "火星" in sf_text
     has_ling_opp = "鈴星" in sf_text
@@ -832,7 +896,7 @@ def calculate_birth_opportunity(html_content):
             sub_scores["格局"] += 15
             process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
-    # 🛡️ 社交魅力防護網 (針對格局層面的干擾源進行扣分)
+    # 🛡️ 5. 社交魅力防護網 (針對格局層面的干擾源進行扣分)
     breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20} 
     for star, pts in breaker_stars.items():
         if star in sf_text:
@@ -852,7 +916,7 @@ def calculate_birth_opportunity(html_content):
         process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
     # ----------------------------------------
 
-    # 模組 2：社交
+    # 模組 2：社交 (活躍度與人際內耗)
     peach_count = sum(social_text.count(s) for s in ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"])
     if peach_count > 0: 
         sub_scores["社交"] += (peach_count * 5)
@@ -878,13 +942,11 @@ def calculate_birth_opportunity(html_content):
                 sub_scores["社交"] += 15
                 process_logs["社交"].append(f"🐎 `{p_name}` 見天馬，適合向外拓展人脈 (+15分)")
                 
-    # 修正雙重扣分：這裡只專注於扣「性格孤立星」，將地空、地劫、鈴星、陀羅交由模組 1 統一處理
     isolating_stars = {"孤辰": 15, "寡宿": 15}
     for star, pts in isolating_stars.items():
         if star in social_text: 
             sub_scores["社交"] -= pts
             process_logs["社交"].append(f"🏠 `{star}` 發威，性格傾向內收或孤獨 (-{pts}分)")
-
     
     # 模組 3：貴人
     if "紫微" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("👑 本命遷移見紫微 (+20分)")
