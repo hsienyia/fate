@@ -458,35 +458,35 @@ def calculate_opportunity_score(html_content, mode):
 
     # 🌟 2. 雙星同宮 (必須在「同一個宮位 p」內同時出現)
     if any("太陽" in p and "太陰" in p for p in active_cells):
-        sub_scores["格局"] += 28; process_logs["格局"].append("☀️🌙 活躍區見日月同宮，磁場和諧吸引好機遇 (+28分)")
+        sub_scores["格局"] += 28; process_logs["格局"].append("☀️🌙 活躍區見日月同宮，磁場和諧吸引好機遇 (+14分)")
     if any("天機" in p and "太陰" in p for p in active_cells):
-        sub_scores["格局"] += 25; process_logs["格局"].append("🧠 活躍區見機陰同宮，心思細膩社交進退得宜 (+25分)")
+        sub_scores["格局"] += 25; process_logs["格局"].append("🧠 活躍區見機陰同宮，心思細膩社交進退得宜 (+12分)")
     if any("廉貞" in p and "貪狼" in p for p in active_cells):
-        sub_scores["格局"] += 18; process_logs["格局"].append("🏅 活躍區見廉貪同宮，風情萬種擄獲異性目光 (+18分)")
+        sub_scores["格局"] += 18; process_logs["格局"].append("🏅 活躍區見廉貪同宮，風情萬種擄獲異性目光 (+9分)")
     if any("紫微" in p and "貪狼" in p for p in active_cells):
-        sub_scores["格局"] += 14; process_logs["格局"].append("🏅 活躍區見紫貪同宮，高貴得體魅力氣場四溢 (+14分)")
+        sub_scores["格局"] += 14; process_logs["格局"].append("🏅 活躍區見紫貪同宮，高貴得體魅力氣場四溢 (+7分)")
     if any("天機" in p and "巨門" in p for p in active_cells):
-        sub_scores["格局"] += 10; process_logs["格局"].append("💬 活躍區見機巨同宮，話題豐富適合知性交流 (+10分)")
+        sub_scores["格局"] += 10; process_logs["格局"].append("💬 活躍區見機巨同宮，話題豐富適合知性交流 (+5分)")
 
     # 🌟 3. 四化專屬爆發 (星曜與四化必須在「同一個宮位 p」內同時出現)
     if any("天同" in p and "祿" in p for p in active_cells):
-        sub_scores["格局"] += 30; process_logs["格局"].append("🥇 活躍區見天同化祿，當下自帶極強療癒親和力 (+30分)")
+        sub_scores["格局"] += 30; process_logs["格局"].append("🥇 活躍區見天同化祿，當下自帶極強療癒親和力 (+15分)")
     if any("紫微" in p and "科" in p for p in active_cells):
-        sub_scores["格局"] += 30; process_logs["格局"].append("👑 活躍區見紫微化科，帝星閃耀，此時威望極高 (+30分)")
+        sub_scores["格局"] += 30; process_logs["格局"].append("👑 活躍區見紫微化科，帝星閃耀，此時威望極高 (+15分)")
     if any("巨門" in p and "祿" in p for p in active_cells):
-        sub_scores["格局"] += 25; process_logs["格局"].append("💬 活躍區見巨門化祿，說服力爆表，極利公關談判 (+25分)")
+        sub_scores["格局"] += 25; process_logs["格局"].append("💬 活躍區見巨門化祿，說服力爆表，極利公關談判 (+12分)")
     if any("太陰" in p and "科" in p for p in active_cells):
-        sub_scores["格局"] += 25; process_logs["格局"].append("🌕 活躍區見太陰化科，優雅內斂高冷氣質 (+25分)")
+        sub_scores["格局"] += 25; process_logs["格局"].append("🌕 活躍區見太陰化科，優雅內斂高冷氣質 (+12分)")
     if any("太陽" in p and "科" in p for p in active_cells):
-        sub_scores["格局"] += 25; process_logs["格局"].append("☀️ 活躍區見太陽化科，行走暖陽談吐優雅 (+25分)")
+        sub_scores["格局"] += 25; process_logs["格局"].append("☀️ 活躍區見太陽化科，行走暖陽談吐優雅 (+12分)")
     if any("貪狼" in p and "祿" in p for p in active_cells):
-        sub_scores["格局"] += 22; process_logs["格局"].append("🏅 活躍區見貪狼化祿，情商天花板，幽默感大爆發 (+22分)")
+        sub_scores["格局"] += 22; process_logs["格局"].append("🏅 活躍區見貪狼化祿，情商天花板，幽默感大爆發 (+11分)")
     if any("太陽" in p and "權" in p for p in active_cells):
-        sub_scores["格局"] += 20; process_logs["格局"].append("🏅 活躍區見太陽化權，霸氣能幹，掌控全局 (+20分)")
+        sub_scores["格局"] += 20; process_logs["格局"].append("🏅 活躍區見太陽化權，霸氣能幹，掌控全局 (+10分)")
     if any("天同" in p and "權" in p for p in active_cells):
-        sub_scores["格局"] += 20; process_logs["格局"].append("🥊 活躍區見天同化權，外柔內剛，談判手腕極佳 (+20分)")
+        sub_scores["格局"] += 20; process_logs["格局"].append("🥊 活躍區見天同化權，外柔內剛，談判手腕極佳 (+10分)")
     if any("天梁" in p and "科" in p for p in active_cells):
-        sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 活躍區見天梁化科，逢凶化吉，易得長輩救援 (+20分)")
+        sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 活躍區見天梁化科，逢凶化吉，易得長輩救援 (+10分)")
 
     # 🚶‍♂️ 4. 基礎行動星判定 (這個看整體氣場，維持 sf_text 即可)
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
