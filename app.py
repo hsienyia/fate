@@ -432,7 +432,7 @@ def calculate_opportunity_score(html_content, mode):
     if ming_pos == -1: return base_score, sub_scores, process_logs
     # ---------------------------
 
-        ming = cell_texts[clockwise_indices[ming_pos]]
+    ming = cell_texts[clockwise_indices[ming_pos]]
     fumu = cell_texts[clockwise_indices[(ming_pos + 1) % 12]]
     guan = cell_texts[clockwise_indices[(ming_pos + 4) % 12]]
     jiao = cell_texts[clockwise_indices[(ming_pos + 5) % 12]]
