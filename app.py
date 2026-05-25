@@ -493,6 +493,23 @@ def calculate_opportunity_score(html_content, mode):
                 sub_scores["格局"] += 2
                 process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+2分)")
 
+    has_tan_opp = "貪狼" in sf_text
+    has_huo_opp = "火星" in sf_text
+    has_ling_opp = "鈴星" in sf_text
+    has_lu_opp = "祿" in sf_text or "祿存" in sf_text
+    has_kongjie_opp = "地空" in sf_text or "地劫" in sf_text
+
+    if has_tan_opp and (has_huo_opp or has_ling_opp):
+        if has_kongjie_opp:
+            sub_scores["格局"] -= 50
+            process_logs["格局"].append("⚠️ 火貪空劫，曇花一現，當心社交圈的突發炎上 (-50分)")
+        elif has_lu_opp:
+            sub_scores["格局"] += 40
+            process_logs["格局"].append("🔥 火鈴貪祿，人氣爆棚，自帶流量的超級發電機 (+40分)")
+        else:
+            sub_scores["格局"] += 15
+            process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
+
     # 🛡️ 社交魅力防護網 (針對格局層面的干擾源進行扣分)
     breaker_stars = {"擎羊": 15, "陀羅": 15, "火星": 10, "鈴星": 10, "地空": 20, "地劫": 20}
     for star, pts in breaker_stars.items():
@@ -777,6 +794,23 @@ def calculate_birth_opportunity(html_content):
             else:
                 sub_scores["格局"] += 2
                 process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+2分)")
+
+    has_tan_opp = "貪狼" in sf_text
+    has_huo_opp = "火星" in sf_text
+    has_ling_opp = "鈴星" in sf_text
+    has_lu_opp = "祿" in sf_text or "祿存" in sf_text
+    has_kongjie_opp = "地空" in sf_text or "地劫" in sf_text
+
+    if has_tan_opp and (has_huo_opp or has_ling_opp):
+        if has_kongjie_opp:
+            sub_scores["格局"] -= 50
+            process_logs["格局"].append("⚠️ 火貪空劫，曇花一現，當心社交圈的突發炎上 (-50分)")
+        elif has_lu_opp:
+            sub_scores["格局"] += 40
+            process_logs["格局"].append("🔥 火鈴貪祿，人氣爆棚，自帶流量的超級發電機 (+40分)")
+        else:
+            sub_scores["格局"] += 15
+            process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
     # 🛡️ 社交魅力防護網 (針對格局層面的干擾源進行扣分)
     breaker_stars = {"擎羊": 15, "陀羅": 15, "火星": 10, "鈴星": 10, "地空": 20, "地劫": 20}
