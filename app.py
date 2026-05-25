@@ -677,6 +677,16 @@ def calculate_birth_wealth(html_content):
             else:
                 score += 15
                 process_log.append(f"⚡ `{p_name}` 火/鈴貪強勢成格，具備強大爆發力底蘊 (+15分)")
+
+        # 💰 本命專屬四化財運彩蛋
+        if "武曲" in p_text and "祿" in p_text:
+            score += 30; process_log.append(f"🌟 `{p_name}` 武曲化祿，財神歸位，實打實的無敵本命金庫 (+30分)")
+        if "破軍" in p_text and "祿" in p_text:
+            score += 25; process_log.append(f"🌪️ `{p_name}` 破軍化祿，破繭而出，亂世抄底的暴利推手 (+25分)")
+        if "天機" in p_text and "祿" in p_text:
+            score += 20; process_log.append(f"🧠 `{p_name}` 天機化祿，智謀生財，靈活穿梭盤勢的波段神童 (+20分)")
+        if "武曲" in p_text and "權" in p_text:
+            score += 20; process_log.append(f"⚖️ `{p_name}` 武曲化權，鐵血紀律，對資金擁有絕對的掌控霸氣 (+20分)")
         # --- 新增亮度邏輯：動態計算財星分數 ---
         for star in ["武曲", "太陰", "天府"]:
             if star in p_text:
@@ -784,6 +794,16 @@ def calculate_birth_opportunity(html_content):
         sub_scores["格局"] += 10
         process_logs["格局"].append("💬 天機巨門，話題豐富，適合知性交流 (+10分)")
 
+    # 🕊️ 本命專屬四化機運彩蛋
+    if "紫微" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 30; process_logs["格局"].append("👑 紫微化科，帝星閃耀，自帶頂級威望與高端貴人圈 (+30分)")
+    if "巨門" in sf_text and "祿" in sf_text:
+        sub_scores["格局"] += 25; process_logs["格局"].append("💬 巨門化祿，開口見金，靠三寸不爛之舌收服人心 (+25分)")
+    if "天梁" in sf_text and "科" in sf_text:
+        sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 天梁化科，逢凶化吉，永遠有德高望重的長輩庇蔭 (+20分)")
+    if "天同" in sf_text and "權" in sf_text:
+        sub_scores["格局"] += 20; process_logs["格局"].append("🥊 天同化權，外柔內剛，用最溫柔的笑臉執行最硬的底線 (+20分)")
+
     # 基礎行動星判定
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
@@ -813,12 +833,20 @@ def calculate_birth_opportunity(html_content):
             process_logs["格局"].append("⚡ 火鈴貪格，魅力四射，突如其來的社交好機遇 (+15分)")
 
     # 🛡️ 社交魅力防護網 (針對格局層面的干擾源進行扣分)
-    breaker_stars = {"擎羊": 15, "陀羅": 15, "火星": 10, "鈴星": 10, "地空": 20, "地劫": 20}
+    breaker_stars = {"擎羊": 15, "陀羅": 15, "地空": 20, "地劫": 20} 
     for star, pts in breaker_stars.items():
         if star in sf_text:
             sub_scores["格局"] -= pts
             process_logs["格局"].append(f"⚠️ `{star}` 攪局，魅力受到干擾，人際表現打折扣 (-{pts}分)")
             
+    # 火星與鈴星的特殊判定：如果「沒有」跟貪狼組隊，才視為破壞星扣分
+    if has_huo_opp and not has_tan_opp:
+        sub_scores["格局"] -= 10
+        process_logs["格局"].append("🔥 `火星` 攪局，情緒急躁，容易瞬間破壞人緣氣場 (-10分)")
+    if has_ling_opp and not has_tan_opp:
+        sub_scores["格局"] -= 10
+        process_logs["格局"].append("🔔 `鈴星` 攪局，陰鬱不滿，讓人覺得難以親近與溝通 (-10分)")
+
     if "巨門" in sf_text and "忌" in sf_text:
         sub_scores["格局"] -= 20
         process_logs["格局"].append("💬 巨門化忌，口舌是非，無心之言導致人際誤解 (-20分)")
@@ -826,19 +854,38 @@ def calculate_birth_opportunity(html_content):
 
     # 模組 2：社交
     peach_count = sum(social_text.count(s) for s in ["紅鸞", "天喜", "天姚", "咸池", "沐浴", "貪狼"])
-    if peach_count > 0: sub_scores["社交"] += (peach_count * 5); process_logs["社交"].append(f"🌸 桃花/人緣星 x{peach_count} (+{peach_count*5}分)")
+    if peach_count > 0: 
+        sub_scores["社交"] += (peach_count * 5)
+        process_logs["社交"].append(f"🌸 桃花/人緣星 x{peach_count} (+{peach_count*5}分)")
+        
     for star in ["祿", "權", "科"]:
         c = social_text.count(star)
-        if c > 0: sub_scores["社交"] += (c * 5); process_logs["社交"].append(f"📈 社交面四化 `{star}` x{c} (+{c*5}分)")
+        if c > 0: 
+            sub_scores["社交"] += (c * 5)
+            process_logs["社交"].append(f"📈 社交面四化 `{star}` x{c} (+{c*5}分)")
+            
     ji_count = social_text.count("忌")
-    if ji_count > 0: sub_scores["社交"] -= (ji_count * 10); process_logs["社交"].append(f"📉 社交面化忌 x{ji_count} (-{ji_count*10}分)")
+    if ji_count > 0: 
+        sub_scores["社交"] -= (ji_count * 10)
+        process_logs["社交"].append(f"📉 社交面化忌 x{ji_count} (-{ji_count*10}分)")
+        
     for p_name, p_text in [("本命遷移", qian), ("本命交友", jiao)]:
         if "馬" in p_text:
-            if "陀" in p_text: sub_scores["社交"] -= 20; process_logs["社交"].append(f"⚠️ `{p_name}` 拐腳馬 (-20分)")
-            else: sub_scores["社交"] += 15; process_logs["社交"].append(f"🐎 `{p_name}` 見天馬 (+15分)")
-    for star, pts in {"孤辰": 15, "寡宿": 15, "地空": 20, "地劫": 20, "鈴星": 15, "陀羅": 15}.items():
-        if star in social_text: sub_scores["社交"] -= pts; process_logs["社交"].append(f"🏠 `{star}` 發威 (-{pts}分)")
+            if "陀" in p_text: 
+                sub_scores["社交"] -= 20
+                process_logs["社交"].append(f"⚠️ `{p_name}` 拐腳馬，出外社交易有波折 (-20分)")
+            else: 
+                sub_scores["社交"] += 15
+                process_logs["社交"].append(f"🐎 `{p_name}` 見天馬，適合向外拓展人脈 (+15分)")
+                
+    # 修正雙重扣分：這裡只專注於扣「性格孤立星」，將地空、地劫、鈴星、陀羅交由模組 1 統一處理
+    isolating_stars = {"孤辰": 15, "寡宿": 15}
+    for star, pts in isolating_stars.items():
+        if star in social_text: 
+            sub_scores["社交"] -= pts
+            process_logs["社交"].append(f"🏠 `{star}` 發威，性格傾向內收或孤獨 (-{pts}分)")
 
+    
     # 模組 3：貴人
     if "紫微" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("👑 本命遷移見紫微 (+20分)")
     if "天府" in qian: sub_scores["貴人"] += 20; process_logs["貴人"].append("🏰 本命遷移見天府 (+20分)")
