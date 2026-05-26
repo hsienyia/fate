@@ -490,17 +490,43 @@ def calculate_opportunity_score(html_content, mode):
     if any("天梁" in p and "科" in p for p in active_cells):
         sub_scores["格局"] += 10; process_logs["格局"].append("🛡️ 活躍區見天梁化科，逢凶化吉，易得長輩救援 (+10分)")
 
-    # 🚶‍♂️ 4. 基礎行動星判定
+    # ----------------------------------------
+    # 3. 基礎行動星判定 (動態亮度加權與陷地懲罰)
+    # ----------------------------------------
+    trap_count = 0  # 紀錄陷地星的數量
+    
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
+            
             if brightness >= 1.1: 
-                sub_scores["格局"] += 5
-                process_logs["格局"].append(f"🚶‍♂️ 活躍區見 `{star}` (廟旺)，能量順暢 (+5分)")
+                # 廟(1.2) 或 旺(1.1) -> 基礎 10 分乘上亮度
+                pts = int(10 * brightness) 
+                sub_scores["格局"] += pts
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (廟旺)，能量通暢順發 (+{pts}分)")
+                
+            elif brightness == 1.0:
+                # 地/利 (1.0) -> 能量平穩給 8 分
+                pts = 8
+                sub_scores["格局"] += pts
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (地利)，能量平穩 (+{pts}分)")
+                
+            elif brightness == 0.8:
+                # 平 (0.8) -> 能量分散，分數砍半給 4 分
+                pts = 4
+                sub_scores["格局"] += pts
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平)，能量稍弱分散 (+{pts}分)")
+                
             else:
-                sub_scores["格局"] += 0
-                process_logs["格局"].append(f"🚶‍♂️ 活躍區見 `{star}` (平陷)，能量平平 (+0分)")
-
+                # 陷 (0.5) -> 能量扭曲，無加分，並準備懲罰
+                trap_count += 1
+                process_logs["格局"].append(f"⚠️ 三方見 `{star}` (陷)，能量扭曲，無格局加分")
+                
+    # 💥 陷地星的額外社交懲罰 (移交至社交模組扣分)
+    if trap_count > 0:
+        penalty = trap_count * 10
+        sub_scores["社交"] -= penalty
+        process_logs["社交"].append(f"📉 活躍區見 {trap_count} 顆陷地行動星，易生誤會或溝通不良 (-{penalty}分)")
     # ----------------------------------------
     # 🔺 終極嚴格版：火鈴貪爆發與空劫黑洞空間定位
     # ----------------------------------------
@@ -890,16 +916,43 @@ def calculate_birth_opportunity(html_content):
             if is_core: sub_scores["格局"] += 20; process_logs["格局"].append("🛡️ 核心區見天梁化科，逢凶化吉長輩庇蔭 (+20分)")
             else: sub_scores["格局"] += 10; process_logs["格局"].append("🛡️ 命盤藏天梁化科，自帶隱形的逢凶化吉基因 (+10分)")
 
+    # ----------------------------------------
+    # 3. 基礎行動星判定 (動態亮度加權與陷地懲罰)
+    # ----------------------------------------
+    trap_count = 0  # 紀錄陷地星的數量
+    
     for star in ["天機", "太陰", "天同", "天梁", "巨門"]:
         if star in sf_text:
             brightness = get_star_brightness(star, sf_text)
+            
             if brightness >= 1.1: 
-                sub_scores["格局"] += 5
-                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (廟旺)，能量爆發 (+5分)")
+                # 廟(1.2) 或 旺(1.1) -> 基礎 10 分乘上亮度
+                pts = int(10 * brightness) 
+                sub_scores["格局"] += pts
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (廟旺)，能量通暢順發 (+{pts}分)")
+                
+            elif brightness == 1.0:
+                # 地/利 (1.0) -> 能量平穩給 8 分
+                pts = 8
+                sub_scores["格局"] += pts
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (地利)，能量平穩 (+{pts}分)")
+                
+            elif brightness == 0.8:
+                # 平 (0.8) -> 能量分散，分數砍半給 4 分
+                pts = 4
+                sub_scores["格局"] += pts
+                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平)，能量稍弱分散 (+{pts}分)")
+                
             else:
-                sub_scores["格局"] += 0
-                process_logs["格局"].append(f"🚶‍♂️ 三方見 `{star}` (平陷)，能量平平 (+0分)")
-
+                # 陷 (0.5) -> 能量扭曲，無加分，並準備懲罰
+                trap_count += 1
+                process_logs["格局"].append(f"⚠️ 三方見 `{star}` (陷)，能量扭曲，無格局加分")
+                
+    # 💥 陷地星的額外社交懲罰 (移交至社交模組扣分)
+    if trap_count > 0:
+        penalty = trap_count * 10
+        sub_scores["社交"] -= penalty
+        process_logs["社交"].append(f"📉 活躍區見 {trap_count} 顆陷地行動星，易生誤會或溝通不良 (-{penalty}分)")
     # ----------------------------------------
     # 🔺 同步套用：本命盤火鈴貪爆發與空劫黑洞空間定位
     # ----------------------------------------
