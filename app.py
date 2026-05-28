@@ -398,7 +398,7 @@ def get_total_luck_index(charts_dict):
 # 引擎區塊 2：全新機運指數 (三大模組整合)
 # ==========================================
 def calculate_opportunity_score(html_content, mode):
-    base_score = 0 
+    base_score = 30 
     
     sub_scores = {"格局": 0, "社交": 0, "貴人": 0}
     process_logs = {"格局": [], "社交": [], "貴人": []}
@@ -1224,7 +1224,7 @@ if hasattr(st.session_state, 'transit_charts') and len(st.session_state.transit_
 
     with st.expander("📝 點此展開查看【機運指數】三大項目詳細算分明細"):
         for mode in ["流年盤", "流月盤", "流日盤", "流時盤"]:
-            st.markdown(f"#### 🧭 【{mode}】結算總分: {opp_scores[mode]} 分 (基準分: 0)")
+            st.markdown(f"#### 🧭 【{mode}】結算總分: {opp_scores[mode]} 分 (基準分: 30)")
             
             col_p, col_s, col_n = st.columns(3)
             
